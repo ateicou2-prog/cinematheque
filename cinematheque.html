@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ma cinémathèque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14181C;
+    --bg-raised:#1B2126;
+    --card:#20272D;
+    --line:#2C363D;
+    --ink:#FFFFFF;
+    --muted:#9AB;
+    --muted2:#748089;
+    --green:#00E054;
+    --orange:#FF8000;
+    --blue:#40BCF4;
+    --purple:#B18CFF;
+    --gold:#F5C518;
+    --red:#E5484D;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:"Inter",sans-serif; min-height:100vh; }
+  header{ padding:44px 24px 26px; border-bottom:1px solid var(--line); background:linear-gradient(180deg, #1a2229 0%, var(--bg) 100%); }
+  .headwrap{ max-width:1200px; margin:0 auto; }
+  h1{ font-family:"Archivo Black",sans-serif; font-size:clamp(28px,4vw,40px); margin:0; letter-spacing:-0.01em; }
+  .brand-dot{ color:var(--green); }
+  .sub{ color:var(--muted2); margin-top:8px; font-size:14.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .imdb-pill{ display:inline-flex; align-items:center; gap:5px; background:var(--gold); color:#000; font-weight:800; font-size:10.5px; padding:2px 6px; border-radius:4px; }
+
+  .backup-row{ display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .backup-btn{
+    font-size:12.5px; font-weight:700; padding:9px 14px; border-radius:8px;
+    border:1px solid var(--line); background:var(--bg-raised); color:var(--ink); cursor:pointer;
+  }
+  .backup-btn:hover{ border-color:var(--gold); color:var(--gold); }
+  .backup-hint{ font-size:11.5px; color:var(--muted2); }
+
+  .stats{ display:flex; gap:16px; margin-top:24px; flex-wrap:wrap; }
+  .stat{ background:var(--bg-raised); border:1px solid var(--line); border-radius:10px; padding:12px 16px; min-width:100px; }
+  .stat b{ display:block; font-size:22px; font-family:"Archivo Black",sans-serif; }
+  .stat span{ font-size:10.5px; color:var(--muted2); text-transform:uppercase; letter-spacing:.05em; }
+  .stat.vu b{ color:var(--green); }
+  .stat.avoir b{ color:var(--orange); }
+  .stat.encours b{ color:var(--blue); }
+  .stat.terminee b{ color:var(--purple); }
+
+  .controls{ max-width:1200px; margin:0 auto; padding:26px 24px 0; display:flex; flex-direction:column; gap:16px; }
+  .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+  .tab{
+    font-size:13px; font-weight:600; padding:10px 16px; border-radius:8px;
+    border:1px solid var(--line); background:var(--bg-raised); color:var(--muted);
+    cursor:pointer; transition:.15s ease; display:flex; align-items:center; gap:8px;
+  }
+  .tab .dot{ width:8px; height:8px; border-radius:50%; background:var(--muted2); }
+  .tab[data-tab="films_vu"] .dot{ background:var(--green); }
+  .tab[data-tab="films_avoir"] .dot{ background:var(--orange); }
+  .tab[data-tab="series_avoir"] .dot{ background:var(--orange); }
+  .tab[data-tab="series_encours"] .dot{ background:var(--blue); }
+  .tab[data-tab="series_ajour"] .dot{ background:var(--blue); }
+  .tab[data-tab="series_terminees"] .dot{ background:var(--purple); }
+  .tab[data-tab="classement"] .dot{ background:var(--gold); }
+  .tab:hover{ border-color:#465058; color:var(--ink); }
+  .tab.active{ background:var(--ink); color:#14181C; border-color:var(--ink); }
+  .tab.active .dot{ background:#14181C; }
+
+  .searchrow{ display:flex; gap:12px; flex-wrap:wrap; }
+  input[type="search"]{
+    flex:1; min-width:220px; background:var(--bg-raised); border:1px solid var(--line);
+    color:var(--ink); padding:11px 14px; border-radius:8px; font-size:14px;
+  }
+  input[type="search"]:focus{ outline:2px solid var(--green); outline-offset:1px; }
+
+  main{ max-width:1200px; margin:0 auto; padding:22px 24px 80px; }
+  .count{ color:var(--muted2); font-size:12.5px; margin:0 0 16px; font-family:"IBM Plex Mono",monospace; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px; }
+  .poster{
+    position:relative; border-radius:9px; overflow:hidden;
+    display:flex; flex-direction:column; border:1px solid var(--line); cursor:pointer;
+    background:var(--card);
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .poster:hover{ transform:translateY(-4px) scale(1.02); box-shadow:0 16px 30px rgba(0,0,0,0.5); border-color:#4a5259; z-index:2; }
+
+  .poster-image{
+    position:relative; aspect-ratio:2/3; overflow:hidden; flex-shrink:0;
+  }
+  .poster-image::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle at 30% 20%, rgba(255,255,255,0.10), transparent 45%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 4px);
+    mix-blend-mode:overlay; pointer-events:none;
+  }
+  .poster.has-img .poster-image::before{ display:none; }
+  .poster-icon{
+    position:absolute; inset:0; z-index:0;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0.16; pointer-events:none;
+  }
+  .poster-icon svg{ width:58%; height:58%; }
+  .poster-real-img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;
+  }
+  .poster-loading{
+    position:absolute; top:8px; left:8px; z-index:1; font-size:8px; font-weight:700;
+    color:var(--muted2); background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;
+  }
+
+  .cast-strip{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; }
+  .similar-strip{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; }
+  .similar-card{ flex-shrink:0; width:76px; text-decoration:none; color:var(--ink); }
+  .similar-poster{ width:76px; height:114px; border-radius:7px; object-fit:cover; background:var(--card); border:1px solid var(--line); }
+  .similar-title{ font-size:10.5px; margin-top:4px; line-height:1.25; }
+  .cast-card{ flex:0 0 auto; width:64px; text-align:center; }
+  .cast-photo{
+    width:64px; height:64px; border-radius:50%; object-fit:cover;
+    background:var(--card); border:1px solid var(--line);
+  }
+  .cast-photo-placeholder{
+    width:64px; height:64px; border-radius:50%; background:var(--card); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; color:var(--muted2);
+  }
+  .cast-name{ font-size:10px; color:var(--muted); margin-top:6px; line-height:1.2; }
+  .modal-poster{ width:100%; max-height:280px; object-fit:cover; border-radius:10px; margin-top:14px; }
+  .modal-year{ color:var(--muted2); font-size:12.5px; margin-top:4px; }
+
+  .poster-badge{
+    position:absolute; top:8px; left:8px; z-index:1; font-size:9px; font-weight:800;
+    letter-spacing:.04em; text-transform:uppercase; padding:3px 7px; border-radius:5px; background:rgba(0,0,0,0.6);
+  }
+  .poster-badge.vu{ color:var(--green); box-shadow:inset 0 0 0 1px var(--green); }
+  .poster-badge.avoir{ color:var(--orange); box-shadow:inset 0 0 0 1px var(--orange); }
+  .poster-badge.encours{ color:var(--blue); box-shadow:inset 0 0 0 1px var(--blue); }
+  .poster-badge.terminee{ color:var(--purple); box-shadow:inset 0 0 0 1px var(--purple); }
+  .poster-heart{ position:absolute; top:8px; right:8px; z-index:1; font-size:14px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+
+  .poster-bottombar{
+    position:relative; background:var(--bg-raised); border-top:1px solid var(--line);
+    padding:8px 9px 6px; flex:1; display:flex; flex-direction:column;
+  }
+  .poster-title{ color:var(--ink); font-size:12px; font-weight:700; line-height:1.25; }
+  .poster-progress{
+    font-family:"IBM Plex Mono",monospace; font-size:9.6px; line-height:1.35; color:var(--muted);
+    margin-top:5px;
+  }
+  .poster-stars{ font-size:10.5px; color:var(--gold); letter-spacing:1px; margin-top:4px; }
+  .poster-gauge{ position:relative; margin:7px 9px 9px; height:5px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; }
+  .poster-gauge-fill{ height:100%; border-radius:3px; background:linear-gradient(90deg, var(--blue), var(--green)); }
+
+  .empty{ text-align:center; color:var(--muted2); padding:60px 20px; font-family:"IBM Plex Mono",monospace; }
+  .empty-icon{ opacity:0.3; width:48px; height:48px; margin:0 auto 14px; display:block; }
+
+  @keyframes posterIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+  .poster, .rank-row{ animation:posterIn .25s ease both; }
+  .grid .poster:nth-child(n){ animation-delay:calc(var(--i, 0) * 12ms); }
+
+  .toast-wrap{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; gap:8px; z-index:200; align-items:center;
+  }
+  .toast{
+    background:var(--bg-raised); border:1px solid var(--line); color:var(--ink);
+    padding:12px 20px; border-radius:10px; font-size:13.5px; font-weight:600;
+    box-shadow:0 10px 24px rgba(0,0,0,0.4);
+    display:flex; align-items:center; gap:10px;
+    animation:toastIn .2s ease;
+  }
+  .toast.success{ border-color:var(--green); }
+  .toast.error{ border-color:var(--red); }
+  @keyframes toastIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes toastOut{ from{ opacity:1; } to{ opacity:0; } }
+  footer{ text-align:center; color:var(--muted2); font-size:12px; padding:30px 24px 50px; font-family:"IBM Plex Mono",monospace; border-top:1px solid var(--line); }
+
+  /* Ranking list */
+  .rank-row{
+    display:flex; align-items:center; gap:14px;
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:10px;
+    padding:10px 14px; margin-bottom:8px;
+    transition:background .12s ease, transform .12s ease, opacity .12s ease;
+    cursor:pointer;
+  }
+  .rank-row.dragging{ opacity:0.35; }
+  .rank-row.drag-over{ border-color:var(--gold); background:rgba(245,197,24,0.06); transform:scale(1.01); }
+  .rank-handle{
+    cursor:grab; color:var(--muted2); font-size:16px; padding:0 2px; user-select:none;
+  }
+  .rank-handle:active{ cursor:grabbing; }
+  .rank-num{ font-family:"Archivo Black",sans-serif; color:var(--muted2); width:24px; text-align:center; }
+  .rank-thumb{ width:36px; aspect-ratio:2/3; border-radius:5px; flex-shrink:0; }
+  .rank-title{ flex:1; font-size:14px; font-weight:600; }
+  .rank-stars{ color:var(--gold); font-size:13px; letter-spacing:1px; min-width:80px; }
+  .rank-heart{ font-size:14px; }
+  .rank-move{ display:flex; gap:4px; }
+  .rank-move button{
+    background:var(--card); border:1px solid var(--line); color:var(--muted);
+    width:26px; height:26px; border-radius:6px; cursor:pointer; font-size:12px;
+  }
+  .rank-move button:hover{ color:var(--ink); border-color:var(--gold); }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.65);
+    display:none; align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:14px;
+    max-width:560px; width:100%; max-height:88vh; overflow-y:auto;
+    padding:24px;
+  }
+  .modal-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .modal-title{ font-family:"Archivo Black",sans-serif; font-size:20px; line-height:1.2; }
+  .modal-close{ background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; line-height:1; }
+  .modal-close:hover{ color:var(--ink); }
+  .modal-link{ font-size:12px; color:var(--gold); text-decoration:none; display:inline-flex; align-items:center; gap:5px; margin-top:6px; }
+  .modal-section{ margin-top:20px; }
+  .modal-label{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted2); margin-bottom:8px; font-family:"IBM Plex Mono",monospace; }
+
+  .heart-toggle{ display:flex; gap:10px; }
+  .heart-btn{
+    flex:1; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--card);
+    color:var(--muted); cursor:pointer; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .heart-btn.active-like{ border-color:var(--green); color:var(--green); background:rgba(0,224,84,0.08); }
+  .heart-btn.active-dislike{ border-color:var(--red); color:var(--red); background:rgba(229,72,77,0.08); }
+
+  .stars-input{ font-size:26px; letter-spacing:6px; cursor:pointer; user-select:none; }
+  .stars-input span{ color:var(--line); }
+  .stars-input span.filled{ color:var(--gold); }
+
+  textarea{
+    width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; padding:10px 12px; font-family:"Inter",sans-serif; font-size:13.5px;
+    resize:vertical; min-height:60px;
+  }
+  textarea:focus{ outline:2px solid var(--green); outline-offset:1px; }
+
+  .season-block{ border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; background:var(--card); }
+  .season-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .season-head b{ font-size:13px; }
+  .season-actions{ display:flex; gap:6px; }
+
+  /* --- real poster image + metadata --- */
+  .poster-img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:-1;
+  }
+  .poster.has-img .poster-icon{ display:none; }
+  .poster-image.has-img-inner{ box-shadow:inset 0 -40px 40px -20px rgba(0,0,0,0.35); }
+
+  .meta-banner{
+    max-width:1200px; margin:0 auto; padding:0 24px;
+  }
+  .meta-banner-inner{
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:10px;
+    padding:12px 16px; font-size:12.5px; color:var(--muted2); display:flex; align-items:center;
+    justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:16px;
+  }
+  .meta-banner b{ color:var(--ink); }
+
+  .meta-row{ display:flex; gap:18px; flex-wrap:wrap; margin-top:6px; font-size:13px; color:var(--muted); }
+  .meta-row b{ color:var(--ink); }
+  .rating-pill{
+    display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px;
+    font-size:12px; font-weight:700; border:1px solid var(--line);
+  }
+  .rating-pill.tmdb{ color:#01d277; border-color:#01d277; }
+  .rating-pill.imdb{ color:var(--gold); border-color:var(--gold); }
+  .cast-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(76px,1fr)); gap:10px; margin-top:6px; }
+  .cast-card{ text-align:center; }
+  .cast-photo{
+    width:100%; aspect-ratio:2/3; border-radius:8px; object-fit:cover; background:var(--card);
+    border:1px solid var(--line);
+  }
+  .cast-name{ font-size:11px; font-weight:600; margin-top:4px; line-height:1.2; }
+  .cast-role{ font-size:10px; color:var(--muted2); line-height:1.2; }
+  .loading-text{ font-size:12px; color:var(--muted2); font-family:"IBM Plex Mono",monospace; }
+  .settings-field{ margin-bottom:14px; }
+  .settings-field label{ font-size:11px; color:var(--muted2); display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; font-family:"IBM Plex Mono",monospace; }
+  .settings-field input{
+    width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink);
+    padding:10px 12px; border-radius:8px; font-size:13.5px;
+  }
+  .settings-help{ font-size:11.5px; color:var(--muted2); margin-top:4px; }
+  .settings-help a{ color:var(--gold); }
+  .mini-btn{
+    background:var(--bg-raised); border:1px solid var(--line); color:var(--muted);
+    font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;
+  }
+  .mini-btn:hover{ color:var(--ink); border-color:var(--gold); }
+  .ep-grid{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ep-chip{
+    width:34px; height:34px; border-radius:7px; border:1px solid var(--line);
+    background:var(--bg-raised); color:var(--muted2); font-size:11px; font-family:"IBM Plex Mono",monospace;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;
+  }
+  .ep-chip.watched{ background:var(--green); border-color:var(--green); color:#04220f; font-weight:700; }
+  .season-add-row{ margin-top:14px; }
+
+  .save-note{ font-size:11px; color:var(--muted2); text-align:center; margin-top:16px; font-family:"IBM Plex Mono",monospace; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="headwrap">
+    <h1>Ma Ciné<span class="brand-dot">•</span>thèque</h1>
+    <p class="sub">Archive personnelle avant la fermeture de TVTime. <span class="imdb-pill">IMDb</span> Cliquez un titre pour noter, cocher les épisodes vus, écrire un avis.</p>
+    <div class="backup-row">
+      <button class="backup-btn" id="exportBtn">💾 Sauvegarde de secours (export)</button>
+      <button class="backup-btn" id="importBtn">📂 Restaurer une sauvegarde</button>
+      <button class="backup-btn" id="tmdbSettingsBtn">🎞️ Affiches &amp; casting (TMDb)</button>
+      <button class="backup-btn" id="syncSettingsBtn">🔗 Synchronisation multi-appareils</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <span class="backup-hint">Tout est déjà sauvegardé automatiquement dans ce navigateur à chaque action — l'export sert seulement de copie de secours (autre appareil, navigateur vidé, etc.), pas besoin de l'utiliser au quotidien.</span>
+    </div>
+    <div class="meta-banner-inner" id="apiStatusBanner"></div>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="films_vu"><span class="dot"></span>Films vus</button>
+    <button class="tab" data-tab="films_avoir"><span class="dot"></span>Films à voir</button>
+    <button class="tab" data-tab="series_terminees"><span class="dot"></span>Séries terminées</button>
+    <button class="tab" data-tab="series_ajour"><span class="dot"></span>Séries à jour</button>
+    <button class="tab" data-tab="series_encours"><span class="dot"></span>Séries en cours</button>
+    <button class="tab" data-tab="series_avoir"><span class="dot"></span>Séries à voir (pas commencé)</button>
+    <button class="tab" data-tab="classement"><span class="dot"></span>Mon classement</button>
+  </div>
+  <div class="searchrow">
+    <input type="search" id="search" placeholder="Rechercher un titre...">
+    <button class="backup-btn" id="addItemBtn">+ Ajouter un film / une série</button>
+  </div>
+</div>
+
+<main>
+  <p class="count" id="count"></p>
+  <div class="grid" id="grid"></div>
+  <div id="rankList" style="display:none;"></div>
+  <div class="empty" id="empty" style="display:none;">
+    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m19.5 19.5-4.3-4.3"/></svg>
+    Aucun titre ne correspond à cette recherche.
+  </div>
+</main>
+
+<footer>Généré à partir de votre historique TVTime &middot; notes, avis et épisodes vus sont sauvegardés directement dans ce fichier HTML (stockage local du navigateur)</footer>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const RAW_DATA = {"films_vu": [{"Titre": "The Avengers", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Avengers", "Lien": "https://www.imdb.com/find/?q=The%20Avengers", "saisons": null, "icon": "shield"}, {"Titre": "Avengers: Endgame", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Avengers%3A%20Endgame", "Lien": "https://www.imdb.com/find/?q=Avengers%3A%20Endgame", "saisons": null, "icon": "shield"}, {"Titre": "Avengers: Age of Ultron", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Avengers%3A%20Age%20of%20Ultron", "Lien": "https://www.imdb.com/find/?q=Avengers%3A%20Age%20of%20Ultron", "saisons": null, "icon": "shield"}, {"Titre": "Thor: Ragnarok", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Thor%3A%20Ragnarok", "Lien": "https://www.imdb.com/find/?q=Thor%3A%20Ragnarok", "saisons": null, "icon": "clapper"}, {"Titre": "Aladdin", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Aladdin", "Lien": "https://www.imdb.com/find/?q=Aladdin", "saisons": null, "icon": "wand"}, {"Titre": "Frozen", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Frozen", "Lien": "https://www.imdb.com/find/?q=Frozen", "saisons": null, "icon": "wand"}, {"Titre": "Titanic", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Titanic", "Lien": "https://www.imdb.com/find/?q=Titanic", "saisons": null, "icon": "heart"}, {"Titre": "The Lion King", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Lion%20King", "Lien": "https://www.imdb.com/find/?q=The%20Lion%20King", "saisons": null, "icon": "wand"}, {"Titre": "Harry Potter a l'ecole des sorciers", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20a%20l%27ecole%20des%20sorciers", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20a%20l%27ecole%20des%20sorciers", "saisons": null, "icon": "sword"}, {"Titre": "Harry Potter et la Coupe de Feu", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20la%20Coupe%20de%20Feu", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20la%20Coupe%20de%20Feu", "saisons": null, "icon": "sword"}, {"Titre": "Harry Potter et l'Ordre du Phenix", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20l%27Ordre%20du%20Phenix", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20l%27Ordre%20du%20Phenix", "saisons": null, "icon": "sword"}, {"Titre": "Harry Potter et les Reliques de la Mort - partie 1", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20les%20Reliques%20de%20la%20Mort%20-%20partie%201", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20les%20Reliques%20de%20la%20Mort%20-%20partie%201", "saisons": null, "icon": "sword"}, {"Titre": "Harry Potter et les Reliques de la Mort - partie 2", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20les%20Reliques%20de%20la%20Mort%20-%20partie%202", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20les%20Reliques%20de%20la%20Mort%20-%20partie%202", "saisons": null, "icon": "sword"}, {"Titre": "Harry Potter et le Prince de sang-mele", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20le%20Prince%20de%20sang-mele", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20le%20Prince%20de%20sang-mele", "saisons": null, "icon": "sword"}, {"Titre": "Harry Potter et le Prisonnier d'Azkaban", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20le%20Prisonnier%20d%27Azkaban", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20le%20Prisonnier%20d%27Azkaban", "saisons": null, "icon": "sword"}, {"Titre": "Spider-Man: Far From Home", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Spider-Man%3A%20Far%20From%20Home", "Lien": "https://www.imdb.com/find/?q=Spider-Man%3A%20Far%20From%20Home", "saisons": null, "icon": "shield"}, {"Titre": "Ratatouille", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Ratatouille", "Lien": "https://www.imdb.com/find/?q=Ratatouille", "saisons": null, "icon": "clapper"}, {"Titre": "Avatar", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Avatar", "Lien": "https://www.imdb.com/find/?q=Avatar", "saisons": null, "icon": "rocket"}, {"Titre": "Coco", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Coco", "Lien": "https://www.imdb.com/find/?q=Coco", "saisons": null, "icon": "wand"}, {"Titre": "Maleficent", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Maleficent", "Lien": "https://www.imdb.com/find/?q=Maleficent", "saisons": null, "icon": "sword"}, {"Titre": "Deadpool", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Deadpool", "Lien": "https://www.imdb.com/find/?q=Deadpool", "saisons": null, "icon": "shield"}, {"Titre": "Aquaman", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Aquaman", "Lien": "https://www.imdb.com/find/?q=Aquaman", "saisons": null, "icon": "shield"}, {"Titre": "Tangled (Raiponce)", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Tangled%20%28Raiponce%29", "Lien": "https://www.imdb.com/find/?q=Tangled%20%28Raiponce%29", "saisons": null, "icon": "wand"}, {"Titre": "Guardians of the Galaxy", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Guardians%20of%20the%20Galaxy", "Lien": "https://www.imdb.com/find/?q=Guardians%20of%20the%20Galaxy", "saisons": null, "icon": "shield"}, {"Titre": "Shrek", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Shrek", "Lien": "https://www.imdb.com/find/?q=Shrek", "saisons": null, "icon": "wand"}, {"Titre": "Inside Out (Vice-Versa)", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Inside%20Out%20%28Vice-Versa%29", "Lien": "https://www.imdb.com/find/?q=Inside%20Out%20%28Vice-Versa%29", "saisons": null, "icon": "clapper"}, {"Titre": "Finding Nemo (Le Monde de Nemo)", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Finding%20Nemo%20%28Le%20Monde%20de%20Nemo%29", "Lien": "https://www.imdb.com/find/?q=Finding%20Nemo%20%28Le%20Monde%20de%20Nemo%29", "saisons": null, "icon": "paw"}, {"Titre": "No Hard Feelings", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=No%20Hard%20Feelings", "Lien": "https://www.imdb.com/find/?q=No%20Hard%20Feelings", "saisons": null, "icon": "clapper"}, {"Titre": "Blue Beetle", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Blue%20Beetle", "Lien": "https://www.imdb.com/find/?q=Blue%20Beetle", "saisons": null, "icon": "shield"}, {"Titre": "A Bronx Tale", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=A%20Bronx%20Tale", "Lien": "https://www.imdb.com/find/?q=A%20Bronx%20Tale", "saisons": null, "icon": "clapper"}, {"Titre": "Dungeons & Dragons: L'Honneur des voleurs", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dungeons%20%26%20Dragons%3A%20L%27Honneur%20des%20voleurs", "Lien": "https://www.imdb.com/find/?q=Dungeons%20%26%20Dragons%3A%20L%27Honneur%20des%20voleurs", "saisons": null, "icon": "sword"}, {"Titre": "Spider-Man: Homecoming", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Spider-Man%3A%20Homecoming", "Lien": "https://www.imdb.com/find/?q=Spider-Man%3A%20Homecoming", "saisons": null, "icon": "shield"}, {"Titre": "Harry Potter et la Chambre des secrets", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20la%20Chambre%20des%20secrets", "Lien": "https://www.imdb.com/find/?q=Harry%20Potter%20et%20la%20Chambre%20des%20secrets", "saisons": null, "icon": "sword"}, {"Titre": "Maleficent: Mistress of Evil", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Maleficent%3A%20Mistress%20of%20Evil", "Lien": "https://www.imdb.com/find/?q=Maleficent%3A%20Mistress%20of%20Evil", "saisons": null, "icon": "sword"}, {"Titre": "Avengers: Age of Ultron", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Avengers%3A%20Age%20of%20Ultron", "Lien": "https://www.imdb.com/find/?q=Avengers%3A%20Age%20of%20Ultron", "saisons": null, "icon": "shield"}, {"Titre": "Without Remorse", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Without%20Remorse", "Lien": "https://www.imdb.com/find/?q=Without%20Remorse", "saisons": null, "icon": "clapper"}, {"Titre": "Spiderhead", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Spiderhead", "Lien": "https://www.imdb.com/find/?q=Spiderhead", "saisons": null, "icon": "clapper"}, {"Titre": "My Spy", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=My%20Spy", "Lien": "https://www.imdb.com/find/?q=My%20Spy", "saisons": null, "icon": "clapper"}, {"Titre": "Black Adam", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Black%20Adam", "Lien": "https://www.imdb.com/find/?q=Black%20Adam", "saisons": null, "icon": "shield"}, {"Titre": "The Princess Diaries", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Princess%20Diaries", "Lien": "https://www.imdb.com/find/?q=The%20Princess%20Diaries", "saisons": null, "icon": "clapper"}, {"Titre": "Coming to America", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Coming%20to%20America", "Lien": "https://www.imdb.com/find/?q=Coming%20to%20America", "saisons": null, "icon": "comedy"}, {"Titre": "Anyone But You", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Anyone%20But%20You", "Lien": "https://www.imdb.com/find/?q=Anyone%20But%20You", "saisons": null, "icon": "heart"}, {"Titre": "Puppy Love", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Puppy%20Love", "Lien": "https://www.imdb.com/find/?q=Puppy%20Love", "saisons": null, "icon": "heart"}, {"Titre": "Players", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Players", "Lien": "https://www.imdb.com/find/?q=Players", "saisons": null, "icon": "clapper"}, {"Titre": "Kraven the Hunter", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Kraven%20the%20Hunter", "Lien": "https://www.imdb.com/find/?q=Kraven%20the%20Hunter", "saisons": null, "icon": "shield"}, {"Titre": "Back in Action", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Back%20in%20Action", "Lien": "https://www.imdb.com/find/?q=Back%20in%20Action", "saisons": null, "icon": "target"}, {"Titre": "1992", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=1992", "Lien": "https://www.imdb.com/find/?q=1992", "saisons": null, "icon": "target"}, {"Titre": "Ghosted", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Ghosted", "Lien": "https://www.imdb.com/find/?q=Ghosted", "saisons": null, "icon": "target"}, {"Titre": "Incoming", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Incoming", "Lien": "https://www.imdb.com/find/?q=Incoming", "saisons": null, "icon": "target"}, {"Titre": "The Fall Guy", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Fall%20Guy", "Lien": "https://www.imdb.com/find/?q=The%20Fall%20Guy", "saisons": null, "icon": "target"}, {"Titre": "X-Men: First Class", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=X-Men%3A%20First%20Class", "Lien": "https://www.imdb.com/find/?q=X-Men%3A%20First%20Class", "saisons": null, "icon": "shield"}, {"Titre": "Cheaper by the Dozen", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Cheaper%20by%20the%20Dozen", "Lien": "https://www.imdb.com/find/?q=Cheaper%20by%20the%20Dozen", "saisons": null, "icon": "ghost"}, {"Titre": "Gladiator", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Gladiator", "Lien": "https://www.imdb.com/find/?q=Gladiator", "saisons": null, "icon": "sword"}, {"Titre": "Kingsman: The Secret Service", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Kingsman%3A%20The%20Secret%20Service", "Lien": "https://www.imdb.com/find/?q=Kingsman%3A%20The%20Secret%20Service", "saisons": null, "icon": "target"}, {"Titre": "The Family Plan", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Family%20Plan", "Lien": "https://www.imdb.com/find/?q=The%20Family%20Plan", "saisons": null, "icon": "clapper"}, {"Titre": "Sidelined: The QB and Me", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Sidelined%3A%20The%20QB%20and%20Me", "Lien": "https://www.imdb.com/find/?q=Sidelined%3A%20The%20QB%20and%20Me", "saisons": null, "icon": "clapper"}, {"Titre": "How to Train Your Dragon", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=How%20to%20Train%20Your%20Dragon", "Lien": "https://www.imdb.com/find/?q=How%20to%20Train%20Your%20Dragon", "saisons": null, "icon": "clapper"}, {"Titre": "Kingdom of Heaven", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Kingdom%20of%20Heaven", "Lien": "https://www.imdb.com/find/?q=Kingdom%20of%20Heaven", "saisons": null, "icon": "sword"}, {"Titre": "The King", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20King", "Lien": "https://www.imdb.com/find/?q=The%20King", "saisons": null, "icon": "clapper"}, {"Titre": "Dear Santa", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dear%20Santa", "Lien": "https://www.imdb.com/find/?q=Dear%20Santa", "saisons": null, "icon": "wand"}, {"Titre": "22 Jump Street", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=22%20Jump%20Street", "Lien": "https://www.imdb.com/find/?q=22%20Jump%20Street", "saisons": null, "icon": "comedy"}, {"Titre": "Rim of the World", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Rim%20of%20the%20World", "Lien": "https://www.imdb.com/find/?q=Rim%20of%20the%20World", "saisons": null, "icon": "clapper"}, {"Titre": "Premier de la classe", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Premier%20de%20la%20classe", "Lien": "https://www.imdb.com/find/?q=Premier%20de%20la%20classe", "saisons": null, "icon": "clapper"}, {"Titre": "The Dark Knight", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Dark%20Knight", "Lien": "https://www.imdb.com/find/?q=The%20Dark%20Knight", "saisons": null, "icon": "shield"}, {"Titre": "The Dark Knight Rises", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Dark%20Knight%20Rises", "Lien": "https://www.imdb.com/find/?q=The%20Dark%20Knight%20Rises", "saisons": null, "icon": "shield"}, {"Titre": "Star Wars: Episode I - The Phantom Menace", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Star%20Wars%3A%20Episode%20I%20-%20The%20Phantom%20Menace", "Lien": "https://www.imdb.com/find/?q=Star%20Wars%3A%20Episode%20I%20-%20The%20Phantom%20Menace", "saisons": null, "icon": "clapper"}, {"Titre": "The Lord of the Rings: The Return of the King", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Lord%20of%20the%20Rings%3A%20The%20Return%20of%20the%20King", "Lien": "https://www.imdb.com/find/?q=The%20Lord%20of%20the%20Rings%3A%20The%20Return%20of%20the%20King", "saisons": null, "icon": "sword"}, {"Titre": "The Lord of the Rings: The Two Towers", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Lord%20of%20the%20Rings%3A%20The%20Two%20Towers", "Lien": "https://www.imdb.com/find/?q=The%20Lord%20of%20the%20Rings%3A%20The%20Two%20Towers", "saisons": null, "icon": "sword"}, {"Titre": "The Lord of the Rings: The Fellowship of the Ring", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Lord%20of%20the%20Rings%3A%20The%20Fellowship%20of%20the%20Ring", "Lien": "https://www.imdb.com/find/?q=The%20Lord%20of%20the%20Rings%3A%20The%20Fellowship%20of%20the%20Ring", "saisons": null, "icon": "sword"}, {"Titre": "The Wrecking Crew (2026)", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Wrecking%20Crew%20%282026%29", "Lien": "https://www.imdb.com/find/?q=The%20Wrecking%20Crew%20%282026%29", "saisons": null, "icon": "explosion"}, {"Titre": "Red Notice", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Red%20Notice", "Lien": "https://www.imdb.com/find/?q=Red%20Notice", "saisons": null, "icon": "target"}, {"Titre": "The Sleepover", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Sleepover", "Lien": "https://www.imdb.com/find/?q=The%20Sleepover", "saisons": null, "icon": "clapper"}, {"Titre": "Star Wars: Episode IV - A New Hope", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Star%20Wars%3A%20Episode%20IV%20-%20A%20New%20Hope", "Lien": "https://www.imdb.com/find/?q=Star%20Wars%3A%20Episode%20IV%20-%20A%20New%20Hope", "saisons": null, "icon": "clapper"}, {"Titre": "Green Book", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Green%20Book", "Lien": "https://www.imdb.com/find/?q=Green%20Book", "saisons": null, "icon": "clapper"}, {"Titre": "The Hobbit: The Battle of the Five Armies", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Hobbit%3A%20The%20Battle%20of%20the%20Five%20Armies", "Lien": "https://www.imdb.com/find/?q=The%20Hobbit%3A%20The%20Battle%20of%20the%20Five%20Armies", "saisons": null, "icon": "sword"}, {"Titre": "The Hobbit: An Unexpected Journey", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Hobbit%3A%20An%20Unexpected%20Journey", "Lien": "https://www.imdb.com/find/?q=The%20Hobbit%3A%20An%20Unexpected%20Journey", "saisons": null, "icon": "sword"}, {"Titre": "The Hobbit: The Desolation of Smaug", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Hobbit%3A%20The%20Desolation%20of%20Smaug", "Lien": "https://www.imdb.com/find/?q=The%20Hobbit%3A%20The%20Desolation%20of%20Smaug", "saisons": null, "icon": "sword"}, {"Titre": "Batman Begins", "Statut": "Vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Batman%20Begins", "Lien": "https://www.imdb.com/find/?q=Batman%20Begins", "saisons": null, "icon": "shield"}], "films_avoir": [{"Titre": "13 Going on 30", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=13%20Going%20on%2030", "Lien": "https://www.imdb.com/find/?q=13%20Going%20on%2030", "saisons": null, "icon": "clapper"}, {"Titre": "2 Guns", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=2%20Guns", "Lien": "https://www.imdb.com/find/?q=2%20Guns", "saisons": null, "icon": "clapper"}, {"Titre": "A Crown for Christmas", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=A%20Crown%20for%20Christmas", "Lien": "https://www.imdb.com/find/?q=A%20Crown%20for%20Christmas", "saisons": null, "icon": "clapper"}, {"Titre": "A Haunted House 2", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=A%20Haunted%20House%202", "Lien": "https://www.imdb.com/find/?q=A%20Haunted%20House%202", "saisons": null, "icon": "clapper"}, {"Titre": "A History of Violence", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=A%20History%20of%20Violence", "Lien": "https://www.imdb.com/find/?q=A%20History%20of%20Violence", "saisons": null, "icon": "clapper"}, {"Titre": "A Million Ways to Die in the West", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=A%20Million%20Ways%20to%20Die%20in%20the%20West", "Lien": "https://www.imdb.com/find/?q=A%20Million%20Ways%20to%20Die%20in%20the%20West", "saisons": null, "icon": "clapper"}, {"Titre": "All Your Faces", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=All%20Your%20Faces", "Lien": "https://www.imdb.com/find/?q=All%20Your%20Faces", "saisons": null, "icon": "clapper"}, {"Titre": "Ant-Man and the Wasp", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Ant-Man%20and%20the%20Wasp", "Lien": "https://www.imdb.com/find/?q=Ant-Man%20and%20the%20Wasp", "saisons": null, "icon": "clapper"}, {"Titre": "Barbarian", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Barbarian", "Lien": "https://www.imdb.com/find/?q=Barbarian", "saisons": null, "icon": "ghost"}, {"Titre": "Barbershop: The Next Cut", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Barbershop%3A%20The%20Next%20Cut", "Lien": "https://www.imdb.com/find/?q=Barbershop%3A%20The%20Next%20Cut", "saisons": null, "icon": "clapper"}, {"Titre": "Bastille Day", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Bastille%20Day", "Lien": "https://www.imdb.com/find/?q=Bastille%20Day", "saisons": null, "icon": "target"}, {"Titre": "Big Game", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Big%20Game", "Lien": "https://www.imdb.com/find/?q=Big%20Game", "saisons": null, "icon": "clapper"}, {"Titre": "Billionaire Boys Club", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Billionaire%20Boys%20Club", "Lien": "https://www.imdb.com/find/?q=Billionaire%20Boys%20Club", "saisons": null, "icon": "clapper"}, {"Titre": "Borderlands", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Borderlands", "Lien": "https://www.imdb.com/find/?q=Borderlands", "saisons": null, "icon": "clapper"}, {"Titre": "Burnt", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Burnt", "Lien": "https://www.imdb.com/find/?q=Burnt", "saisons": null, "icon": "clapper"}, {"Titre": "Bury My Heart at Wounded Knee", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Bury%20My%20Heart%20at%20Wounded%20Knee", "Lien": "https://www.imdb.com/find/?q=Bury%20My%20Heart%20at%20Wounded%20Knee", "saisons": null, "icon": "clapper"}, {"Titre": "Carry-On", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Carry-On", "Lien": "https://www.imdb.com/find/?q=Carry-On", "saisons": null, "icon": "clapper"}, {"Titre": "Chang Can Dunk", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Chang%20Can%20Dunk", "Lien": "https://www.imdb.com/find/?q=Chang%20Can%20Dunk", "saisons": null, "icon": "basketball"}, {"Titre": "Collateral", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Collateral", "Lien": "https://www.imdb.com/find/?q=Collateral", "saisons": null, "icon": "clapper"}, {"Titre": "Dans 5 ans", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dans%205%20ans", "Lien": "https://www.imdb.com/find/?q=Dans%205%20ans", "saisons": null, "icon": "clapper"}, {"Titre": "Dark Shadows", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dark%20Shadows", "Lien": "https://www.imdb.com/find/?q=Dark%20Shadows", "saisons": null, "icon": "ghost"}, {"Titre": "Death at a Funeral", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Death%20at%20a%20Funeral", "Lien": "https://www.imdb.com/find/?q=Death%20at%20a%20Funeral", "saisons": null, "icon": "clapper"}, {"Titre": "Death Race", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Death%20Race", "Lien": "https://www.imdb.com/find/?q=Death%20Race", "saisons": null, "icon": "clapper"}, {"Titre": "Debarquement Immediat!", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Debarquement%20Immediat%21", "Lien": "https://www.imdb.com/find/?q=Debarquement%20Immediat%21", "saisons": null, "icon": "clapper"}, {"Titre": "Deck the Halls", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Deck%20the%20Halls", "Lien": "https://www.imdb.com/find/?q=Deck%20the%20Halls", "saisons": null, "icon": "clapper"}, {"Titre": "Demolition", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Demolition", "Lien": "https://www.imdb.com/find/?q=Demolition", "saisons": null, "icon": "clapper"}, {"Titre": "Den of Thieves", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Den%20of%20Thieves", "Lien": "https://www.imdb.com/find/?q=Den%20of%20Thieves", "saisons": null, "icon": "target"}, {"Titre": "Divergent", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Divergent", "Lien": "https://www.imdb.com/find/?q=Divergent", "saisons": null, "icon": "clapper"}, {"Titre": "Dog", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dog", "Lien": "https://www.imdb.com/find/?q=Dog", "saisons": null, "icon": "paw"}, {"Titre": "Dune", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dune", "Lien": "https://www.imdb.com/find/?q=Dune", "saisons": null, "icon": "rocket"}, {"Titre": "Empire of Light", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Empire%20of%20Light", "Lien": "https://www.imdb.com/find/?q=Empire%20of%20Light", "saisons": null, "icon": "briefcase"}, {"Titre": "Equal Standard", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Equal%20Standard", "Lien": "https://www.imdb.com/find/?q=Equal%20Standard", "saisons": null, "icon": "clapper"}, {"Titre": "Fifty Shades Darker", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fifty%20Shades%20Darker", "Lien": "https://www.imdb.com/find/?q=Fifty%20Shades%20Darker", "saisons": null, "icon": "heart"}, {"Titre": "Final Destination", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Final%20Destination", "Lien": "https://www.imdb.com/find/?q=Final%20Destination", "saisons": null, "icon": "ghost"}, {"Titre": "Final Destination 2", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Final%20Destination%202", "Lien": "https://www.imdb.com/find/?q=Final%20Destination%202", "saisons": null, "icon": "ghost"}, {"Titre": "Final Destination 3", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Final%20Destination%203", "Lien": "https://www.imdb.com/find/?q=Final%20Destination%203", "saisons": null, "icon": "ghost"}, {"Titre": "Final Destination 4", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Final%20Destination%204", "Lien": "https://www.imdb.com/find/?q=Final%20Destination%204", "saisons": null, "icon": "ghost"}, {"Titre": "Final Destination 5", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Final%20Destination%205", "Lien": "https://www.imdb.com/find/?q=Final%20Destination%205", "saisons": null, "icon": "ghost"}, {"Titre": "Fire with Fire", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fire%20with%20Fire", "Lien": "https://www.imdb.com/find/?q=Fire%20with%20Fire", "saisons": null, "icon": "clapper"}, {"Titre": "Fountain of Youth", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fountain%20of%20Youth", "Lien": "https://www.imdb.com/find/?q=Fountain%20of%20Youth", "saisons": null, "icon": "clapper"}, {"Titre": "Free State of Jones", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Free%20State%20of%20Jones", "Lien": "https://www.imdb.com/find/?q=Free%20State%20of%20Jones", "saisons": null, "icon": "explosion"}, {"Titre": "Fresh", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fresh", "Lien": "https://www.imdb.com/find/?q=Fresh", "saisons": null, "icon": "ghost"}, {"Titre": "Fruitvale Station", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fruitvale%20Station", "Lien": "https://www.imdb.com/find/?q=Fruitvale%20Station", "saisons": null, "icon": "clapper"}, {"Titre": "Fury", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fury", "Lien": "https://www.imdb.com/find/?q=Fury", "saisons": null, "icon": "explosion"}, {"Titre": "God's Crooked Lines", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=God%27s%20Crooked%20Lines", "Lien": "https://www.imdb.com/find/?q=God%27s%20Crooked%20Lines", "saisons": null, "icon": "clapper"}, {"Titre": "Gran Turismo", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Gran%20Turismo", "Lien": "https://www.imdb.com/find/?q=Gran%20Turismo", "saisons": null, "icon": "basketball"}, {"Titre": "Gridiron Gang", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Gridiron%20Gang", "Lien": "https://www.imdb.com/find/?q=Gridiron%20Gang", "saisons": null, "icon": "clapper"}, {"Titre": "Grown Ups", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Grown%20Ups", "Lien": "https://www.imdb.com/find/?q=Grown%20Ups", "saisons": null, "icon": "comedy"}, {"Titre": "Grown Ups 2", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Grown%20Ups%202", "Lien": "https://www.imdb.com/find/?q=Grown%20Ups%202", "saisons": null, "icon": "comedy"}, {"Titre": "Haunting in Venice", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Haunting%20in%20Venice", "Lien": "https://www.imdb.com/find/?q=Haunting%20in%20Venice", "saisons": null, "icon": "ghost"}, {"Titre": "Homestead", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Homestead", "Lien": "https://www.imdb.com/find/?q=Homestead", "saisons": null, "icon": "clapper"}, {"Titre": "Horrible Bosses", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Horrible%20Bosses", "Lien": "https://www.imdb.com/find/?q=Horrible%20Bosses", "saisons": null, "icon": "comedy"}, {"Titre": "Horrible Bosses 2", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Horrible%20Bosses%202", "Lien": "https://www.imdb.com/find/?q=Horrible%20Bosses%202", "saisons": null, "icon": "comedy"}, {"Titre": "Inestimable", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Inestimable", "Lien": "https://www.imdb.com/find/?q=Inestimable", "saisons": null, "icon": "clapper"}, {"Titre": "Just Mercy", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Just%20Mercy", "Lien": "https://www.imdb.com/find/?q=Just%20Mercy", "saisons": null, "icon": "clapper"}, {"Titre": "Just My Luck", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Just%20My%20Luck", "Lien": "https://www.imdb.com/find/?q=Just%20My%20Luck", "saisons": null, "icon": "clapper"}, {"Titre": "Justice League", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Justice%20League", "Lien": "https://www.imdb.com/find/?q=Justice%20League", "saisons": null, "icon": "shield"}, {"Titre": "Kangaroo Jack", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Kangaroo%20Jack", "Lien": "https://www.imdb.com/find/?q=Kangaroo%20Jack", "saisons": null, "icon": "paw"}, {"Titre": "Karate Kid: Legends", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Karate%20Kid%3A%20Legends", "Lien": "https://www.imdb.com/find/?q=Karate%20Kid%3A%20Legends", "saisons": null, "icon": "clapper"}, {"Titre": "Knock Knock", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Knock%20Knock", "Lien": "https://www.imdb.com/find/?q=Knock%20Knock", "saisons": null, "icon": "ghost"}, {"Titre": "Kong: Skull Island", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Kong%3A%20Skull%20Island", "Lien": "https://www.imdb.com/find/?q=Kong%3A%20Skull%20Island", "saisons": null, "icon": "clapper"}, {"Titre": "Law Abiding Citizen", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Law%20Abiding%20Citizen", "Lien": "https://www.imdb.com/find/?q=Law%20Abiding%20Citizen", "saisons": null, "icon": "target"}, {"Titre": "Legend", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Legend", "Lien": "https://www.imdb.com/find/?q=Legend", "saisons": null, "icon": "clapper"}, {"Titre": "Les Miserables", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Les%20Miserables", "Lien": "https://www.imdb.com/find/?q=Les%20Miserables", "saisons": null, "icon": "clapper"}, {"Titre": "Les Rois Mages", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Les%20Rois%20Mages", "Lien": "https://www.imdb.com/find/?q=Les%20Rois%20Mages", "saisons": null, "icon": "clapper"}, {"Titre": "Le Temps des Secrets", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Le%20Temps%20des%20Secrets", "Lien": "https://www.imdb.com/find/?q=Le%20Temps%20des%20Secrets", "saisons": null, "icon": "clapper"}, {"Titre": "Leon: The Professional", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Leon%3A%20The%20Professional", "Lien": "https://www.imdb.com/find/?q=Leon%3A%20The%20Professional", "saisons": null, "icon": "clapper"}, {"Titre": "Like Mike", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Like%20Mike", "Lien": "https://www.imdb.com/find/?q=Like%20Mike", "saisons": null, "icon": "basketball"}, {"Titre": "Like Mike 2: Streetball", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Like%20Mike%202%3A%20Streetball", "Lien": "https://www.imdb.com/find/?q=Like%20Mike%202%3A%20Streetball", "saisons": null, "icon": "basketball"}, {"Titre": "Little", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Little", "Lien": "https://www.imdb.com/find/?q=Little", "saisons": null, "icon": "clapper"}, {"Titre": "Lone Survivor", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Lone%20Survivor", "Lien": "https://www.imdb.com/find/?q=Lone%20Survivor", "saisons": null, "icon": "explosion"}, {"Titre": "Look Both Ways", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Look%20Both%20Ways", "Lien": "https://www.imdb.com/find/?q=Look%20Both%20Ways", "saisons": null, "icon": "clapper"}, {"Titre": "Love Don't Cost a Thing", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Love%20Don%27t%20Cost%20a%20Thing", "Lien": "https://www.imdb.com/find/?q=Love%20Don%27t%20Cost%20a%20Thing", "saisons": null, "icon": "clapper"}, {"Titre": "Love Tactics", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Love%20Tactics", "Lien": "https://www.imdb.com/find/?q=Love%20Tactics", "saisons": null, "icon": "heart"}, {"Titre": "Man on Fire", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Man%20on%20Fire", "Lien": "https://www.imdb.com/find/?q=Man%20on%20Fire", "saisons": null, "icon": "clapper"}, {"Titre": "Marta", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Marta", "Lien": "https://www.imdb.com/find/?q=Marta", "saisons": null, "icon": "clapper"}, {"Titre": "Mean Girls 2", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Mean%20Girls%202", "Lien": "https://www.imdb.com/find/?q=Mean%20Girls%202", "saisons": null, "icon": "graduation"}, {"Titre": "Meet Bill", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Meet%20Bill", "Lien": "https://www.imdb.com/find/?q=Meet%20Bill", "saisons": null, "icon": "clapper"}, {"Titre": "Meet Joe Black", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Meet%20Joe%20Black", "Lien": "https://www.imdb.com/find/?q=Meet%20Joe%20Black", "saisons": null, "icon": "heart"}, {"Titre": "Megamind", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Megamind", "Lien": "https://www.imdb.com/find/?q=Megamind", "saisons": null, "icon": "wand"}, {"Titre": "Mon Frere", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Mon%20Frere", "Lien": "https://www.imdb.com/find/?q=Mon%20Frere", "saisons": null, "icon": "clapper"}, {"Titre": "Never Back Down", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Never%20Back%20Down", "Lien": "https://www.imdb.com/find/?q=Never%20Back%20Down", "saisons": null, "icon": "graduation"}, {"Titre": "Never Back Down: No Surrender", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Never%20Back%20Down%3A%20No%20Surrender", "Lien": "https://www.imdb.com/find/?q=Never%20Back%20Down%3A%20No%20Surrender", "saisons": null, "icon": "graduation"}, {"Titre": "Never Back Down: The Beatdown 2", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Never%20Back%20Down%3A%20The%20Beatdown%202", "Lien": "https://www.imdb.com/find/?q=Never%20Back%20Down%3A%20The%20Beatdown%202", "saisons": null, "icon": "graduation"}, {"Titre": "New Jack City", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=New%20Jack%20City", "Lien": "https://www.imdb.com/find/?q=New%20Jack%20City", "saisons": null, "icon": "clapper"}, {"Titre": "No Reservations", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=No%20Reservations", "Lien": "https://www.imdb.com/find/?q=No%20Reservations", "saisons": null, "icon": "clapper"}, {"Titre": "Now You See Me 2", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Now%20You%20See%20Me%202", "Lien": "https://www.imdb.com/find/?q=Now%20You%20See%20Me%202", "saisons": null, "icon": "diamond"}, {"Titre": "Obsession", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Obsession", "Lien": "https://www.imdb.com/find/?q=Obsession", "saisons": null, "icon": "ghost"}, {"Titre": "Paddington", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Paddington", "Lien": "https://www.imdb.com/find/?q=Paddington", "saisons": null, "icon": "wand"}, {"Titre": "Percy Jackson: Sea of Monsters", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Percy%20Jackson%3A%20Sea%20of%20Monsters", "Lien": "https://www.imdb.com/find/?q=Percy%20Jackson%3A%20Sea%20of%20Monsters", "saisons": null, "icon": "sword"}, {"Titre": "Percy Jackson & the Lightning Thief", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Percy%20Jackson%20%26%20the%20Lightning%20Thief", "Lien": "https://www.imdb.com/find/?q=Percy%20Jackson%20%26%20the%20Lightning%20Thief", "saisons": null, "icon": "sword"}, {"Titre": "Piranha", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Piranha", "Lien": "https://www.imdb.com/find/?q=Piranha", "saisons": null, "icon": "ghost"}, {"Titre": "Pizza Movie", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Pizza%20Movie", "Lien": "https://www.imdb.com/find/?q=Pizza%20Movie", "saisons": null, "icon": "comedy"}, {"Titre": "Pulp Fiction", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Pulp%20Fiction", "Lien": "https://www.imdb.com/find/?q=Pulp%20Fiction", "saisons": null, "icon": "clapper"}, {"Titre": "Race to Witch Mountain", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Race%20to%20Witch%20Mountain", "Lien": "https://www.imdb.com/find/?q=Race%20to%20Witch%20Mountain", "saisons": null, "icon": "clapper"}, {"Titre": "Red Tails", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Red%20Tails", "Lien": "https://www.imdb.com/find/?q=Red%20Tails", "saisons": null, "icon": "explosion"}, {"Titre": "Rebel Ridge", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Rebel%20Ridge", "Lien": "https://www.imdb.com/find/?q=Rebel%20Ridge", "saisons": null, "icon": "clapper"}, {"Titre": "Rescued by Ruby", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Rescued%20by%20Ruby", "Lien": "https://www.imdb.com/find/?q=Rescued%20by%20Ruby", "saisons": null, "icon": "paw"}, {"Titre": "Rising High", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Rising%20High", "Lien": "https://www.imdb.com/find/?q=Rising%20High", "saisons": null, "icon": "clapper"}, {"Titre": "Road House", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Road%20House", "Lien": "https://www.imdb.com/find/?q=Road%20House", "saisons": null, "icon": "target"}, {"Titre": "Rush Hour", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Rush%20Hour", "Lien": "https://www.imdb.com/find/?q=Rush%20Hour", "saisons": null, "icon": "clapper"}, {"Titre": "Safety", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Safety", "Lien": "https://www.imdb.com/find/?q=Safety", "saisons": null, "icon": "basketball"}, {"Titre": "Samaritan", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Samaritan", "Lien": "https://www.imdb.com/find/?q=Samaritan", "saisons": null, "icon": "target"}, {"Titre": "Scouts Guide to the Zombie Apocalypse", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Scouts%20Guide%20to%20the%20Zombie%20Apocalypse", "Lien": "https://www.imdb.com/find/?q=Scouts%20Guide%20to%20the%20Zombie%20Apocalypse", "saisons": null, "icon": "ghost"}, {"Titre": "She's the Man", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=She%27s%20the%20Man", "Lien": "https://www.imdb.com/find/?q=She%27s%20the%20Man", "saisons": null, "icon": "clapper"}, {"Titre": "Shooter", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Shooter", "Lien": "https://www.imdb.com/find/?q=Shooter", "saisons": null, "icon": "clapper"}, {"Titre": "Shooting Stars", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Shooting%20Stars", "Lien": "https://www.imdb.com/find/?q=Shooting%20Stars", "saisons": null, "icon": "clapper"}, {"Titre": "Shutter Island", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Shutter%20Island", "Lien": "https://www.imdb.com/find/?q=Shutter%20Island", "saisons": null, "icon": "ghost"}, {"Titre": "Sky High", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Sky%20High", "Lien": "https://www.imdb.com/find/?q=Sky%20High", "saisons": null, "icon": "graduation"}, {"Titre": "Snowden", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Snowden", "Lien": "https://www.imdb.com/find/?q=Snowden", "saisons": null, "icon": "clapper"}, {"Titre": "Sorry to Bother You", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Sorry%20to%20Bother%20You", "Lien": "https://www.imdb.com/find/?q=Sorry%20to%20Bother%20You", "saisons": null, "icon": "clapper"}, {"Titre": "Sound of Freedom", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Sound%20of%20Freedom", "Lien": "https://www.imdb.com/find/?q=Sound%20of%20Freedom", "saisons": null, "icon": "clapper"}, {"Titre": "Spider-Man: Across the Spider-Verse", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Spider-Man%3A%20Across%20the%20Spider-Verse", "Lien": "https://www.imdb.com/find/?q=Spider-Man%3A%20Across%20the%20Spider-Verse", "saisons": null, "icon": "shield"}, {"Titre": "Starship Troopers", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Starship%20Troopers", "Lien": "https://www.imdb.com/find/?q=Starship%20Troopers", "saisons": null, "icon": "rocket"}, {"Titre": "Stomp the Yard", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Stomp%20the%20Yard", "Lien": "https://www.imdb.com/find/?q=Stomp%20the%20Yard", "saisons": null, "icon": "clapper"}, {"Titre": "Stomp the Yard: Homecoming", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Stomp%20the%20Yard%3A%20Homecoming", "Lien": "https://www.imdb.com/find/?q=Stomp%20the%20Yard%3A%20Homecoming", "saisons": null, "icon": "clapper"}, {"Titre": "Stop-Loss", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Stop-Loss", "Lien": "https://www.imdb.com/find/?q=Stop-Loss", "saisons": null, "icon": "explosion"}, {"Titre": "Teen Beach Movie", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Teen%20Beach%20Movie", "Lien": "https://www.imdb.com/find/?q=Teen%20Beach%20Movie", "saisons": null, "icon": "clapper"}, {"Titre": "Tenor", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Tenor", "Lien": "https://www.imdb.com/find/?q=Tenor", "saisons": null, "icon": "clapper"}, {"Titre": "The Banker", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Banker", "Lien": "https://www.imdb.com/find/?q=The%20Banker", "saisons": null, "icon": "clapper"}, {"Titre": "The Butler", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Butler", "Lien": "https://www.imdb.com/find/?q=The%20Butler", "saisons": null, "icon": "clapper"}, {"Titre": "The Forge", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Forge", "Lien": "https://www.imdb.com/find/?q=The%20Forge", "saisons": null, "icon": "clapper"}, {"Titre": "The Gentlemen", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Gentlemen", "Lien": "https://www.imdb.com/find/?q=The%20Gentlemen", "saisons": null, "icon": "briefcase"}, {"Titre": "The Gorge", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Gorge", "Lien": "https://www.imdb.com/find/?q=The%20Gorge", "saisons": null, "icon": "clapper"}, {"Titre": "The Green Hornet", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Green%20Hornet", "Lien": "https://www.imdb.com/find/?q=The%20Green%20Hornet", "saisons": null, "icon": "clapper"}, {"Titre": "The Green Mile", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Green%20Mile", "Lien": "https://www.imdb.com/find/?q=The%20Green%20Mile", "saisons": null, "icon": "clapper"}, {"Titre": "The Guardian", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Guardian", "Lien": "https://www.imdb.com/find/?q=The%20Guardian", "saisons": null, "icon": "clapper"}, {"Titre": "The Hate U Give", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Hate%20U%20Give", "Lien": "https://www.imdb.com/find/?q=The%20Hate%20U%20Give", "saisons": null, "icon": "clapper"}, {"Titre": "The House with a Clock in its Walls", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20House%20with%20a%20Clock%20in%20its%20Walls", "Lien": "https://www.imdb.com/find/?q=The%20House%20with%20a%20Clock%20in%20its%20Walls", "saisons": null, "icon": "clapper"}, {"Titre": "The Hunger Games: The Ballad of Songbirds & Snakes", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Hunger%20Games%3A%20The%20Ballad%20of%20Songbirds%20%26%20Snakes", "Lien": "https://www.imdb.com/find/?q=The%20Hunger%20Games%3A%20The%20Ballad%20of%20Songbirds%20%26%20Snakes", "saisons": null, "icon": "clapper"}, {"Titre": "The Invitation", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Invitation", "Lien": "https://www.imdb.com/find/?q=The%20Invitation", "saisons": null, "icon": "ghost"}, {"Titre": "The Kid Who Would Be King", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Kid%20Who%20Would%20Be%20King", "Lien": "https://www.imdb.com/find/?q=The%20Kid%20Who%20Would%20Be%20King", "saisons": null, "icon": "clapper"}, {"Titre": "The Map of Tiny Perfect Things", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Map%20of%20Tiny%20Perfect%20Things", "Lien": "https://www.imdb.com/find/?q=The%20Map%20of%20Tiny%20Perfect%20Things", "saisons": null, "icon": "clapper"}, {"Titre": "The Mauritanian", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Mauritanian", "Lien": "https://www.imdb.com/find/?q=The%20Mauritanian", "saisons": null, "icon": "clapper"}, {"Titre": "The New Mutants", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20New%20Mutants", "Lien": "https://www.imdb.com/find/?q=The%20New%20Mutants", "saisons": null, "icon": "clapper"}, {"Titre": "The Northman", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Northman", "Lien": "https://www.imdb.com/find/?q=The%20Northman", "saisons": null, "icon": "clapper"}, {"Titre": "The Perks of Being a Wallflower", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Perks%20of%20Being%20a%20Wallflower", "Lien": "https://www.imdb.com/find/?q=The%20Perks%20of%20Being%20a%20Wallflower", "saisons": null, "icon": "clapper"}, {"Titre": "The System", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20System", "Lien": "https://www.imdb.com/find/?q=The%20System", "saisons": null, "icon": "target"}, {"Titre": "The Ultimate Life", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Ultimate%20Life", "Lien": "https://www.imdb.com/find/?q=The%20Ultimate%20Life", "saisons": null, "icon": "clapper"}, {"Titre": "The Upside", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Upside", "Lien": "https://www.imdb.com/find/?q=The%20Upside", "saisons": null, "icon": "clapper"}, {"Titre": "Thunderstruck", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Thunderstruck", "Lien": "https://www.imdb.com/find/?q=Thunderstruck", "saisons": null, "icon": "basketball"}, {"Titre": "Unthinkable", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Unthinkable", "Lien": "https://www.imdb.com/find/?q=Unthinkable", "saisons": null, "icon": "clapper"}, {"Titre": "Vive la France", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Vive%20la%20France", "Lien": "https://www.imdb.com/find/?q=Vive%20la%20France", "saisons": null, "icon": "clapper"}, {"Titre": "What Men Want", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=What%20Men%20Want", "Lien": "https://www.imdb.com/find/?q=What%20Men%20Want", "saisons": null, "icon": "clapper"}, {"Titre": "Why Him?", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Why%20Him%3F", "Lien": "https://www.imdb.com/find/?q=Why%20Him%3F", "saisons": null, "icon": "comedy"}, {"Titre": "Wicked", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Wicked", "Lien": "https://www.imdb.com/find/?q=Wicked", "saisons": null, "icon": "sword"}, {"Titre": "Wonder", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Wonder", "Lien": "https://www.imdb.com/find/?q=Wonder", "saisons": null, "icon": "clapper"}, {"Titre": "Wrath of Man", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Wrath%20of%20Man", "Lien": "https://www.imdb.com/find/?q=Wrath%20of%20Man", "saisons": null, "icon": "target"}, {"Titre": "Zodiac", "Statut": "Pas vu", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Zodiac", "Lien": "https://www.imdb.com/find/?q=Zodiac", "saisons": null, "icon": "ghost"}], "series_avoir": [{"Titre": "Dirty Sexy Money", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dirty%20Sexy%20Money", "Lien": "https://www.imdb.com/find/?q=Dirty%20Sexy%20Money", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "briefcase"}, {"Titre": "Power Book II: Ghost", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Power%20Book%20II%3A%20Ghost", "Lien": "https://www.imdb.com/find/?q=Power%20Book%20II%3A%20Ghost", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Station 19", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Station%2019", "Lien": "https://www.imdb.com/find/?q=Station%2019", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Two and a Half Men", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Two%20and%20a%20Half%20Men", "Lien": "https://www.imdb.com/find/?q=Two%20and%20a%20Half%20Men", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "comedy"}, {"Titre": "The Michael Blackson Show", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Michael%20Blackson%20Show", "Lien": "https://www.imdb.com/find/?q=The%20Michael%20Blackson%20Show", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "comedy"}, {"Titre": "Gangs of London", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Gangs%20of%20London", "Lien": "https://www.imdb.com/find/?q=Gangs%20of%20London", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Only Murders in the Building", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Only%20Murders%20in%20the%20Building", "Lien": "https://www.imdb.com/find/?q=Only%20Murders%20in%20the%20Building", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Law & Order", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Law%20%26%20Order", "Lien": "https://www.imdb.com/find/?q=Law%20%26%20Order", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Yellowstone", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Yellowstone", "Lien": "https://www.imdb.com/find/?q=Yellowstone", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Empire", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Empire", "Lien": "https://www.imdb.com/find/?q=Empire", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "briefcase"}, {"Titre": "The Gentlemen", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Gentlemen", "Lien": "https://www.imdb.com/find/?q=The%20Gentlemen", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "briefcase"}, {"Titre": "Mixed-ish", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Mixed-ish", "Lien": "https://www.imdb.com/find/?q=Mixed-ish", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Boondocks", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Boondocks", "Lien": "https://www.imdb.com/find/?q=The%20Boondocks", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "paw"}, {"Titre": "The Big C", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Big%20C", "Lien": "https://www.imdb.com/find/?q=The%20Big%20C", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Good Wife", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Good%20Wife", "Lien": "https://www.imdb.com/find/?q=The%20Good%20Wife", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "61st Street", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=61st%20Street", "Lien": "https://www.imdb.com/find/?q=61st%20Street", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Surviving Escobar: Alias JJ", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Surviving%20Escobar%3A%20Alias%20JJ", "Lien": "https://www.imdb.com/find/?q=Surviving%20Escobar%3A%20Alias%20JJ", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Legend of the Seeker", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Legend%20of%20the%20Seeker", "Lien": "https://www.imdb.com/find/?q=Legend%20of%20the%20Seeker", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "MacGyver", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=MacGyver", "Lien": "https://www.imdb.com/find/?q=MacGyver", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Tulsa King", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Tulsa%20King", "Lien": "https://www.imdb.com/find/?q=Tulsa%20King", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "BMF: Black Mafia Family", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=BMF%3A%20Black%20Mafia%20Family", "Lien": "https://www.imdb.com/find/?q=BMF%3A%20Black%20Mafia%20Family", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Swagger", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Swagger", "Lien": "https://www.imdb.com/find/?q=Swagger", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "basketball"}, {"Titre": "WeCrashed", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=WeCrashed", "Lien": "https://www.imdb.com/find/?q=WeCrashed", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "Upload", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Upload", "Lien": "https://www.imdb.com/find/?q=Upload", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "Big Shot", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Big%20Shot", "Lien": "https://www.imdb.com/find/?q=Big%20Shot", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Love Death & Robots", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Love%20Death%20%26%20Robots", "Lien": "https://www.imdb.com/find/?q=Love%20Death%20%26%20Robots", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Godfather of Harlem", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Godfather%20of%20Harlem", "Lien": "https://www.imdb.com/find/?q=Godfather%20of%20Harlem", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Reginald the Vampire", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Reginald%20the%20Vampire", "Lien": "https://www.imdb.com/find/?q=Reginald%20the%20Vampire", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Misfits", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Misfits", "Lien": "https://www.imdb.com/find/?q=Misfits", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "New Amsterdam", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=New%20Amsterdam", "Lien": "https://www.imdb.com/find/?q=New%20Amsterdam", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Invincible", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Invincible", "Lien": "https://www.imdb.com/find/?q=Invincible", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "shield"}, {"Titre": "Desperate Housewives", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Desperate%20Housewives", "Lien": "https://www.imdb.com/find/?q=Desperate%20Housewives", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Martin", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Martin", "Lien": "https://www.imdb.com/find/?q=Martin", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Money & Violence", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Money%20%26%20Violence", "Lien": "https://www.imdb.com/find/?q=Money%20%26%20Violence", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "His Dark Materials", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=His%20Dark%20Materials", "Lien": "https://www.imdb.com/find/?q=His%20Dark%20Materials", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Jessie", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Jessie", "Lien": "https://www.imdb.com/find/?q=Jessie", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Bunk'd", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Bunk%27d", "Lien": "https://www.imdb.com/find/?q=Bunk%27d", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Liv and Maddie", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Liv%20and%20Maddie", "Lien": "https://www.imdb.com/find/?q=Liv%20and%20Maddie", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Wizards of Waverly Place", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Wizards%20of%20Waverly%20Place", "Lien": "https://www.imdb.com/find/?q=Wizards%20of%20Waverly%20Place", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "The Suite Life on Deck", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Suite%20Life%20on%20Deck", "Lien": "https://www.imdb.com/find/?q=The%20Suite%20Life%20on%20Deck", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "The Suite Life of Zack & Cody", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Suite%20Life%20of%20Zack%20%26%20Cody", "Lien": "https://www.imdb.com/find/?q=The%20Suite%20Life%20of%20Zack%20%26%20Cody", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "The Wire", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Wire", "Lien": "https://www.imdb.com/find/?q=The%20Wire", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Mr. Inbetween", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Mr.%20Inbetween", "Lien": "https://www.imdb.com/find/?q=Mr.%20Inbetween", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Narvalo", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Narvalo", "Lien": "https://www.imdb.com/find/?q=Narvalo", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Supacell", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Supacell", "Lien": "https://www.imdb.com/find/?q=Supacell", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "That's So Raven", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=That%27s%20So%20Raven", "Lien": "https://www.imdb.com/find/?q=That%27s%20So%20Raven", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Raven's Home", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Raven%27s%20Home", "Lien": "https://www.imdb.com/find/?q=Raven%27s%20Home", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Austin & Ally", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Austin%20%26%20Ally", "Lien": "https://www.imdb.com/find/?q=Austin%20%26%20Ally", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Bel-Air", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Bel-Air", "Lien": "https://www.imdb.com/find/?q=Bel-Air", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Good Luck Charlie", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Good%20Luck%20Charlie", "Lien": "https://www.imdb.com/find/?q=Good%20Luck%20Charlie", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Landman", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Landman", "Lien": "https://www.imdb.com/find/?q=Landman", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "This Is Us", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=This%20Is%20Us", "Lien": "https://www.imdb.com/find/?q=This%20Is%20Us", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "heart"}, {"Titre": "Starting 5", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Starting%205", "Lien": "https://www.imdb.com/find/?q=Starting%205", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "basketball"}, {"Titre": "SEE", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=SEE", "Lien": "https://www.imdb.com/find/?q=SEE", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Haunted Hathaways", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Haunted%20Hathaways", "Lien": "https://www.imdb.com/find/?q=The%20Haunted%20Hathaways", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Game Shakers", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Game%20Shakers", "Lien": "https://www.imdb.com/find/?q=Game%20Shakers", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Fresh Off the Boat", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fresh%20Off%20the%20Boat", "Lien": "https://www.imdb.com/find/?q=Fresh%20Off%20the%20Boat", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Kim's Convenience", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Kim%27s%20Convenience", "Lien": "https://www.imdb.com/find/?q=Kim%27s%20Convenience", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Atlanta", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Atlanta", "Lien": "https://www.imdb.com/find/?q=Atlanta", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Percy Jackson and the Olympians", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Percy%20Jackson%20and%20the%20Olympians", "Lien": "https://www.imdb.com/find/?q=Percy%20Jackson%20and%20the%20Olympians", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "Black Bird", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Black%20Bird", "Lien": "https://www.imdb.com/find/?q=Black%20Bird", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Abbott Elementary", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Abbott%20Elementary", "Lien": "https://www.imdb.com/find/?q=Abbott%20Elementary", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Secret Invasion", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Secret%20Invasion", "Lien": "https://www.imdb.com/find/?q=Secret%20Invasion", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Unstable", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Unstable", "Lien": "https://www.imdb.com/find/?q=Unstable", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Wizards: Beyond Waverly Place", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Wizards%3A%20Beyond%20Waverly%20Place", "Lien": "https://www.imdb.com/find/?q=Wizards%3A%20Beyond%20Waverly%20Place", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Scandal", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Scandal", "Lien": "https://www.imdb.com/find/?q=Scandal", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Justice League (animee)", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Justice%20League%20%28animee%29", "Lien": "https://www.imdb.com/find/?q=Justice%20League%20%28animee%29", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "shield"}, {"Titre": "Young Justice", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Young%20Justice", "Lien": "https://www.imdb.com/find/?q=Young%20Justice", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "shield"}, {"Titre": "Forever", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Forever", "Lien": "https://www.imdb.com/find/?q=Forever", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "The Blacklist", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Blacklist", "Lien": "https://www.imdb.com/find/?q=The%20Blacklist", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Crisis", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Crisis", "Lien": "https://www.imdb.com/find/?q=Crisis", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Victorious", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Victorious", "Lien": "https://www.imdb.com/find/?q=Victorious", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Mayor of Kingstown", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Mayor%20of%20Kingstown", "Lien": "https://www.imdb.com/find/?q=Mayor%20of%20Kingstown", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Night Agent", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Night%20Agent", "Lien": "https://www.imdb.com/find/?q=The%20Night%20Agent", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Billions", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Billions", "Lien": "https://www.imdb.com/find/?q=Billions", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Paradise", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Paradise", "Lien": "https://www.imdb.com/find/?q=Paradise", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Ghosts", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Ghosts", "Lien": "https://www.imdb.com/find/?q=Ghosts", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Raising Hope", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Raising%20Hope", "Lien": "https://www.imdb.com/find/?q=Raising%20Hope", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Time Bandits", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Time%20Bandits", "Lien": "https://www.imdb.com/find/?q=Time%20Bandits", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "Adolescence", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Adolescence", "Lien": "https://www.imdb.com/find/?q=Adolescence", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Tacoma FD", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Tacoma%20FD", "Lien": "https://www.imdb.com/find/?q=Tacoma%20FD", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Workin' Moms", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Workin%27%20Moms", "Lien": "https://www.imdb.com/find/?q=Workin%27%20Moms", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "comedy"}, {"Titre": "Quantico", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Quantico", "Lien": "https://www.imdb.com/find/?q=Quantico", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Industry", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Industry", "Lien": "https://www.imdb.com/find/?q=Industry", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "A Man in Full", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=A%20Man%20in%20Full", "Lien": "https://www.imdb.com/find/?q=A%20Man%20in%20Full", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "briefcase"}, {"Titre": "The Great", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Great", "Lien": "https://www.imdb.com/find/?q=The%20Great", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "Little America", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Little%20America", "Lien": "https://www.imdb.com/find/?q=Little%20America", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Lie to Me", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Lie%20to%20Me", "Lien": "https://www.imdb.com/find/?q=Lie%20to%20Me", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "PEN15", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=PEN15", "Lien": "https://www.imdb.com/find/?q=PEN15", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Legacies", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Legacies", "Lien": "https://www.imdb.com/find/?q=Legacies", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Chad Powers", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Chad%20Powers", "Lien": "https://www.imdb.com/find/?q=Chad%20Powers", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "The Crown", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Crown", "Lien": "https://www.imdb.com/find/?q=The%20Crown", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "briefcase"}, {"Titre": "Midnight Mass", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Midnight%20Mass", "Lien": "https://www.imdb.com/find/?q=Midnight%20Mass", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Reacher", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Reacher", "Lien": "https://www.imdb.com/find/?q=Reacher", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Curb Your Enthusiasm", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Curb%20Your%20Enthusiasm", "Lien": "https://www.imdb.com/find/?q=Curb%20Your%20Enthusiasm", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "comedy"}, {"Titre": "The Good Lord Bird", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Good%20Lord%20Bird", "Lien": "https://www.imdb.com/find/?q=The%20Good%20Lord%20Bird", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Dark", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dark", "Lien": "https://www.imdb.com/find/?q=Dark", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "3 Body Problem", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=3%20Body%20Problem", "Lien": "https://www.imdb.com/find/?q=3%20Body%20Problem", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "Key & Peele", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Key%20%26%20Peele", "Lien": "https://www.imdb.com/find/?q=Key%20%26%20Peele", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "comedy"}, {"Titre": "SEAL Team", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=SEAL%20Team", "Lien": "https://www.imdb.com/find/?q=SEAL%20Team", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Smallville", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Smallville", "Lien": "https://www.imdb.com/find/?q=Smallville", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "shield"}, {"Titre": "P-Valley", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=P-Valley", "Lien": "https://www.imdb.com/find/?q=P-Valley", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "True Detective", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=True%20Detective", "Lien": "https://www.imdb.com/find/?q=True%20Detective", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Grand Army", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Grand%20Army", "Lien": "https://www.imdb.com/find/?q=Grand%20Army", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Shrinking", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Shrinking", "Lien": "https://www.imdb.com/find/?q=Shrinking", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "King & Conqueror", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=King%20%26%20Conqueror", "Lien": "https://www.imdb.com/find/?q=King%20%26%20Conqueror", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "The Tudors", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Tudors", "Lien": "https://www.imdb.com/find/?q=The%20Tudors", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "The Lincoln Lawyer", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Lincoln%20Lawyer", "Lien": "https://www.imdb.com/find/?q=The%20Lincoln%20Lawyer", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Animal Kingdom", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Animal%20Kingdom", "Lien": "https://www.imdb.com/find/?q=Animal%20Kingdom", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Love Victor", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Love%20Victor", "Lien": "https://www.imdb.com/find/?q=Love%20Victor", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "heart"}, {"Titre": "Wu-Tang: An American Saga", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Wu-Tang%3A%20An%20American%20Saga", "Lien": "https://www.imdb.com/find/?q=Wu-Tang%3A%20An%20American%20Saga", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Peripheral", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Peripheral", "Lien": "https://www.imdb.com/find/?q=The%20Peripheral", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "diamond"}, {"Titre": "Cross", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Cross", "Lien": "https://www.imdb.com/find/?q=Cross", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "The End of the F***ing World", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20End%20of%20the%20F%2A%2A%2Aing%20World", "Lien": "https://www.imdb.com/find/?q=The%20End%20of%20the%20F%2A%2A%2Aing%20World", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Schmigadoon!", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Schmigadoon%21", "Lien": "https://www.imdb.com/find/?q=Schmigadoon%21", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Off Camera with Sam Jones", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Off%20Camera%20with%20Sam%20Jones", "Lien": "https://www.imdb.com/find/?q=Off%20Camera%20with%20Sam%20Jones", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "13 Reasons Why", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=13%20Reasons%20Why", "Lien": "https://www.imdb.com/find/?q=13%20Reasons%20Why", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "graduation"}, {"Titre": "Gen V", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Gen%20V", "Lien": "https://www.imdb.com/find/?q=Gen%20V", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Beef", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Beef", "Lien": "https://www.imdb.com/find/?q=Beef", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Man on Fire (serie)", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Man%20on%20Fire%20%28serie%29", "Lien": "https://www.imdb.com/find/?q=Man%20on%20Fire%20%28serie%29", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Iron Fist", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Iron%20Fist", "Lien": "https://www.imdb.com/find/?q=Iron%20Fist", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Last Kingdom", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Last%20Kingdom", "Lien": "https://www.imdb.com/find/?q=The%20Last%20Kingdom", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "Maid", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Maid", "Lien": "https://www.imdb.com/find/?q=Maid", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Wheel of Time", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Wheel%20of%20Time", "Lien": "https://www.imdb.com/find/?q=The%20Wheel%20of%20Time", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "Spider Noir", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Spider%20Noir", "Lien": "https://www.imdb.com/find/?q=Spider%20Noir", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "Severance", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Severance", "Lien": "https://www.imdb.com/find/?q=Severance", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "Silicon Valley", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Silicon%20Valley", "Lien": "https://www.imdb.com/find/?q=Silicon%20Valley", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Oz", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Oz", "Lien": "https://www.imdb.com/find/?q=Oz", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Malory Towers", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Malory%20Towers", "Lien": "https://www.imdb.com/find/?q=Malory%20Towers", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Winning Time: The Rise of the Lakers Dynasty", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Winning%20Time%3A%20The%20Rise%20of%20the%20Lakers%20Dynasty", "Lien": "https://www.imdb.com/find/?q=Winning%20Time%3A%20The%20Rise%20of%20the%20Lakers%20Dynasty", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Dutton Ranch", "Statut": "A voir", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Dutton%20Ranch", "Lien": "https://www.imdb.com/find/?q=Dutton%20Ranch", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}], "series_encours": [{"Titre": "The Rookie", "Categorie": "En cours - bien avancee", "Progression": "S1-S6 finies - S7 en cours 4/18", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Rookie", "Lien": "https://www.imdb.com/find/?q=The%20Rookie", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 5, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 6, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 7, "episodes": [true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Bridgerton", "Categorie": "En cours - bien avancee", "Progression": "S1-S3 finies - S4 en cours 4/8", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Bridgerton", "Lien": "https://www.imdb.com/find/?q=Bridgerton", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, false, false, false, false]}], "icon": "heart"}, {"Titre": "Vikings", "Categorie": "En cours - bien avancee", "Progression": "S1-S3 finies - S4 en cours 8/20", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Vikings", "Lien": "https://www.imdb.com/find/?q=Vikings", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "Power", "Categorie": "En cours - bien avancee", "Progression": "S1-S3 finies - S4 en cours 3/10", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Power", "Lien": "https://www.imdb.com/find/?q=Power", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Shameless (US)", "Categorie": "En cours - bien avancee", "Progression": "S1-S3 finies - S4 en cours 7/12", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Shameless%20%28US%29", "Lien": "https://www.imdb.com/find/?q=Shameless%20%28US%29", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "All American", "Categorie": "En cours - bien avancee", "Progression": "S1 finie - S2 en cours 4/16", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=All%20American", "Lien": "https://www.imdb.com/find/?q=All%20American", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Gotham", "Categorie": "En cours - bien avancee", "Progression": "S1 finie - S2 en cours 14/22", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Gotham", "Lien": "https://www.imdb.com/find/?q=Gotham", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Witcher", "Categorie": "Juste commencee", "Progression": "6/8 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Witcher", "Lien": "https://www.imdb.com/find/?q=The%20Witcher", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, false, false]}], "icon": "sword"}, {"Titre": "black-ish", "Categorie": "Juste commencee", "Progression": "15/24 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=black-ish", "Lien": "https://www.imdb.com/find/?q=black-ish", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "All American: Homecoming", "Categorie": "Juste commencee", "Progression": "5/13 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=All%20American%3A%20Homecoming", "Lien": "https://www.imdb.com/find/?q=All%20American%3A%20Homecoming", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Chi", "Categorie": "Juste commencee", "Progression": "4/10 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Chi", "Lien": "https://www.imdb.com/find/?q=The%20Chi", "saisons": [{"numero": 1, "episodes": [true, true, true, true, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Euphoria (US)", "Categorie": "Juste commencee", "Progression": "2/8 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Euphoria%20%28US%29", "Lien": "https://www.imdb.com/find/?q=Euphoria%20%28US%29", "saisons": [{"numero": 1, "episodes": [true, true, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Doctor Who (2005)", "Categorie": "Juste commencee", "Progression": "3/13 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Doctor%20Who%20%282005%29", "Lien": "https://www.imdb.com/find/?q=Doctor%20Who%20%282005%29", "saisons": [{"numero": 1, "episodes": [true, true, true, false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "The Vampire Diaries", "Categorie": "Juste commencee", "Progression": "2/22 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Vampire%20Diaries", "Lien": "https://www.imdb.com/find/?q=The%20Vampire%20Diaries", "saisons": [{"numero": 1, "episodes": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Bear", "Categorie": "Juste commencee", "Progression": "1/8 de la S1", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Bear", "Lien": "https://www.imdb.com/find/?q=The%20Bear", "saisons": [{"numero": 1, "episodes": [true, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Vince Staples Show", "Categorie": "Juste commencee", "Progression": "S1 finie - S2 pas commencee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Vince%20Staples%20Show", "Lien": "https://www.imdb.com/find/?q=The%20Vince%20Staples%20Show", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Kingdom", "Categorie": "Saisons completes", "Progression": "S1-S4 completes - S5 pas commencee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Kingdom", "Lien": "https://www.imdb.com/find/?q=Kingdom", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 5, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Narcos", "Categorie": "Saisons completes", "Progression": "S1-S2 completes - S3 pas commencee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Narcos", "Lien": "https://www.imdb.com/find/?q=Narcos", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Suits", "Categorie": "Saisons completes", "Progression": "S1-S6 completes - S7 en cours 6/16 - S8 pas commencee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Suits", "Lien": "https://www.imdb.com/find/?q=Suits", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 5, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 6, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 7, "episodes": [true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false]}, {"numero": 8, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "target"}, {"Titre": "Snowfall", "Categorie": "Saisons completes", "Progression": "S1 complete - S2 en cours 3/10", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Snowfall", "Lien": "https://www.imdb.com/find/?q=Snowfall", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Cobra Kai", "Categorie": "Saisons completes", "Progression": "S1 complete - S2 en cours 1/10", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Cobra%20Kai", "Lien": "https://www.imdb.com/find/?q=Cobra%20Kai", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Lupin", "Categorie": "Saisons completes", "Progression": "S1 complete - S2-S3 pas commencees", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Lupin", "Lien": "https://www.imdb.com/find/?q=Lupin", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [false, false, false, false, false, false, false, false, false, false]}, {"numero": 3, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Fire Force", "Categorie": "Saisons completes", "Progression": "S1-S2 completes - S3 en cours 18/25", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Fire%20Force", "Lien": "https://www.imdb.com/find/?q=Fire%20Force", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false, false]}], "icon": "clapper", "diffusion_terminee": true}, {"Titre": "Wednesday", "Categorie": "Saisons completes", "Progression": "S1 complete - S2 pas commencee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Wednesday", "Lien": "https://www.imdb.com/find/?q=Wednesday", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Ginny & Georgia", "Categorie": "Saison 1 entamee", "Progression": "5/10", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Ginny%20%26%20Georgia", "Lien": "https://www.imdb.com/find/?q=Ginny%20%26%20Georgia", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, false, false, false, false, false]}], "icon": "heart"}, {"Titre": "The Flash (2014)", "Categorie": "Saison 1 entamee", "Progression": "6/23", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Flash%20%282014%29", "Lien": "https://www.imdb.com/find/?q=The%20Flash%20%282014%29", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]}], "icon": "rocket"}, {"Titre": "Outer Banks", "Categorie": "Saison 1 entamee", "Progression": "4/10", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Outer%20Banks", "Lien": "https://www.imdb.com/find/?q=Outer%20Banks", "saisons": [{"numero": 1, "episodes": [true, true, true, true, false, false, false, false, false, false]}], "icon": "heart"}, {"Titre": "Succession", "Categorie": "Saison 1 entamee", "Progression": "4/10", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Succession", "Lien": "https://www.imdb.com/find/?q=Succession", "saisons": [{"numero": 1, "episodes": [true, true, true, true, false, false, false, false, false, false]}], "icon": "briefcase"}, {"Titre": "Arrow", "Categorie": "Saison 1 entamee", "Progression": "9/23", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Arrow", "Lien": "https://www.imdb.com/find/?q=Arrow", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false]}], "icon": "clapper"}, {"Titre": "Running Point", "Categorie": "Saison 1 entamee", "Progression": "S1 10/10 finie - S2 en cours 6/10", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Running%20Point", "Lien": "https://www.imdb.com/find/?q=Running%20Point", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, false, false, false, false]}], "icon": "clapper"}, {"Titre": "The Boys", "Categorie": "Saison 1 entamee", "Progression": "4/8", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Boys", "Lien": "https://www.imdb.com/find/?q=The%20Boys", "saisons": [{"numero": 1, "episodes": [true, true, true, true, false, false, false, false]}], "icon": "shield"}, {"Titre": "Off Campus", "Categorie": "Saison 1 entamee", "Progression": "5/8", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Off%20Campus", "Lien": "https://www.imdb.com/find/?q=Off%20Campus", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, false, false, false]}], "icon": "comedy"}, {"Titre": "Supernatural", "Categorie": "Saison 1 entamee", "Progression": "16/22", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Supernatural", "Lien": "https://www.imdb.com/find/?q=Supernatural", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false]}], "icon": "ghost"}, {"Titre": "Not Suitable for Work", "Categorie": "Saison 1 entamee", "Progression": "7/9", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Not%20Suitable%20for%20Work", "Lien": "https://www.imdb.com/find/?q=Not%20Suitable%20for%20Work", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, false, false]}], "icon": "comedy"}, {"Titre": "2 Broke Girls", "Categorie": "Saison 1 entamee", "Progression": "2/24", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=2%20Broke%20Girls", "Lien": "https://www.imdb.com/find/?q=2%20Broke%20Girls", "saisons": [{"numero": 1, "episodes": [true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]}], "icon": "comedy"}], "series_terminees": [{"Titre": "Game of Thrones", "Statut": "Terminee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Game%20of%20Thrones&s=tt", "Lien": "https://www.imdb.com/find/?q=Game%20of%20Thrones&s=tt", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 5, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 6, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 7, "episodes": [true, true, true, true, true, true, true]}, {"numero": 8, "episodes": [true, true, true, true, true, true]}], "icon": "sword"}, {"Titre": "On My Block", "Statut": "Terminee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=On%20My%20Block&s=tt", "Lien": "https://www.imdb.com/find/?q=On%20My%20Block&s=tt", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, true]}], "icon": "clapper"}, {"Titre": "The Amazing Digital Circus", "Statut": "Terminee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Amazing%20Digital%20Circus&s=tt", "Lien": "https://www.imdb.com/find/?q=The%20Amazing%20Digital%20Circus&s=tt", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true]}], "icon": "wand"}, {"Titre": "Modern Family", "Statut": "Terminee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Modern%20Family&s=tt", "Lien": "https://www.imdb.com/find/?q=Modern%20Family&s=tt", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 4, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 5, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 6, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 7, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 8, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 9, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 10, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}, {"numero": 11, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}], "icon": "clapper"}, {"Titre": "Cruel Intentions", "Statut": "Terminee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=Cruel%20Intentions&s=tt", "Lien": "https://www.imdb.com/find/?q=Cruel%20Intentions&s=tt", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true]}], "icon": "heart"}, {"Titre": "The Game (2021)", "Statut": "Terminee", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=The%20Game%20%282021%29&s=tt", "Lien": "https://www.imdb.com/find/?q=The%20Game%20%282021%29&s=tt", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]}], "icon": "clapper"}], "series_ajour": [{"Titre": "A Knight of the Seven Kingdoms", "Progression": "A jour", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=A%20Knight%20of%20the%20Seven%20Kingdoms&s=tt", "Lien": "https://www.imdb.com/find/?q=A%20Knight%20of%20the%20Seven%20Kingdoms&s=tt", "saisons": [{"numero": 1, "episodes": [false, false, false, false, false, false, false, false, false, false]}], "icon": "sword"}, {"Titre": "House of the Dragon", "Progression": "A jour (S3E4)", "Lien_affiche_IMDb": "https://www.imdb.com/find/?q=House%20of%20the%20Dragon&s=tt", "Lien": "https://www.imdb.com/find/?q=House%20of%20the%20Dragon&s=tt", "saisons": [{"numero": 1, "episodes": [true, true, true, true, true, true, true, true]}, {"numero": 2, "episodes": [true, true, true, true, true, true, true, true]}, {"numero": 3, "episodes": [true, true, true, true, false, false, false, false]}], "icon": "sword"}]};
+const STORAGE_KEY = "cinematheque_state_v1";
+const CUSTOM_KEY = "cinematheque_custom_items_v1";
+
+// ---------- storage ----------
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch(e){}
+  schedulePush();
+}
+function loadCustomItems(){
+  try{
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveCustomItems(){
+  try{ localStorage.setItem(CUSTOM_KEY, JSON.stringify(CUSTOM_ITEMS)); }catch(e){}
+  schedulePush();
+}
+let STATE = loadState(); // keyed by uid -> {rating, liked, review, funFact, saisons, order}
+let CUSTOM_ITEMS = loadCustomItems(); // array of raw item objects the user added by hand
+
+// ---------- Firebase sync (optional, multi-device) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyA-kDgs1RpY57R6__uGE6FoZOzDZGTieRY",
+  authDomain: "cinematheque-web-4b8a2.firebaseapp.com",
+  projectId: "cinematheque-web-4b8a2",
+  storageBucket: "cinematheque-web-4b8a2.firebasestorage.app",
+  messagingSenderId: "101352983258",
+  appId: "1:101352983258:web:04a143ef143e082f3df3e3"
+};
+let fbDb = null;
+try{
+  if(typeof firebase !== "undefined"){
+    firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.firestore();
+  }
+}catch(e){ console.warn("Firebase init failed", e); fbDb = null; }
+
+const SYNC_CODE_KEY = "cinematheque_sync_code_v1";
+let SYNC_CODE = localStorage.getItem(SYNC_CODE_KEY) || "";
+
+function docRefForCode(code){ return fbDb.collection("cinematheque_users").doc(code); }
+
+function generateSyncCode(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars (0/O, 1/I)
+  let code = "";
+  for(let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+let pushTimer = null;
+function schedulePush(){
+  if(!SYNC_CODE || !fbDb) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushToCloud, 1500);
+}
+async function pushToCloud(){
+  if(!SYNC_CODE || !fbDb) return;
+  try{
+    await docRefForCode(SYNC_CODE).set({
+      state: STATE,
+      customItems: CUSTOM_ITEMS,
+      tmdbKey: TMDB_API_KEY || "",
+      omdbKey: OMDB_API_KEY || "",
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }catch(e){ console.warn("Firebase push failed", e); }
+}
+
+async function pullFromCloud(code){
+  if(!fbDb) return null;
+  try{
+    const snap = await docRefForCode(code).get();
+    return snap.exists ? snap.data() : null;
+  }catch(e){ console.warn("Firebase pull failed", e); return null; }
+}
+
+async function syncPullAndRefresh(code, opts){
+  opts = opts || {};
+  const data = await pullFromCloud(code);
+  if(!data){
+    if(opts.notify) toast("Aucune donnée existante pour ce code — elle sera créée à la prochaine modification.", "success");
+    return;
+  }
+  (data.customItems || []).forEach(raw => {
+    const uid = raw.uid || (raw.cat + ":" + slug(raw.Titre));
+    if(!ALL_ITEMS.some(it => it.uid === uid)){
+      CUSTOM_ITEMS.push(raw);
+      const defaults = CAT_DEFAULTS[raw.cat] || CAT_DEFAULTS.films_avoir;
+      ingest(raw.cat, [raw], defaults, true);
+    }
+  });
+  saveCustomItemsLocalOnly();
+
+  Object.keys(data.state || {}).forEach(uid => { STATE[uid] = data.state[uid]; });
+  ALL_ITEMS.forEach((item, i) => {
+    if(!STATE[item.uid]){
+      STATE[item.uid] = {
+        rating: 0, liked: null, review: "", funFact: "",
+        saisons: item.saisons ? JSON.parse(JSON.stringify(item.saisons)) : null,
+        order: i
+      };
+    }
+  });
+  saveStateLocalOnly();
+
+  if(data.tmdbKey){ TMDB_API_KEY = data.tmdbKey; localStorage.setItem(TMDB_KEY_STORAGE, TMDB_API_KEY); }
+  if(data.omdbKey){ OMDB_API_KEY = data.omdbKey; localStorage.setItem(OMDB_KEY_STORAGE, OMDB_API_KEY); }
+
+  renderStats(); renderApiStatus(); render();
+  if(opts.notify) toast("Synchronisation réussie — vos données sont à jour ✓", "success");
+}
+// local-only save variants used during the initial cloud pull, to avoid re-triggering a push loop
+function saveStateLocalOnly(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch(e){} }
+function saveCustomItemsLocalOnly(){ try{ localStorage.setItem(CUSTOM_KEY, JSON.stringify(CUSTOM_ITEMS)); }catch(e){} }
+
+// ---------- build unified item list with stable uid ----------
+let ALL_ITEMS = [];
+let UID_COUNTER = 0;
+
+function slug(s){ return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+
+function ingest(catKey, arr, defaults, isCustom){
+  arr.forEach((raw, idx) => {
+    const uid = raw.uid || (catKey + ":" + slug(raw.Titre));
+    const item = {
+      uid, cat: catKey, title: raw.Titre, link: raw.Lien || "#",
+      badgeDefault: defaults.badge, cls: defaults.cls, hueBase: defaults.hueBase,
+      progression: raw.Progression || null,
+      categorie: raw.Categorie || null,
+      saisons: raw.saisons || null,
+      icon: raw.icon || "clapper",
+      custom: !!isCustom,
+    };
+    ALL_ITEMS.push(item);
+  });
+}
+
+const CAT_DEFAULTS = {
+  films_vu:         {badge:"Vu", cls:"vu", hueBase:150},
+  films_avoir:      {badge:"À voir", cls:"avoir", hueBase:28},
+  series_terminees: {badge:"Terminée", cls:"terminee", hueBase:265},
+  series_ajour:     {badge:"À jour", cls:"encours", hueBase:200},
+  series_encours:   {badge:null, cls:"encours", hueBase:200},
+  series_avoir:     {badge:"À voir", cls:"avoir", hueBase:28},
+};
+
+ingest("films_vu", RAW_DATA.films_vu, CAT_DEFAULTS.films_vu);
+ingest("films_avoir", RAW_DATA.films_avoir, CAT_DEFAULTS.films_avoir);
+ingest("series_terminees", RAW_DATA.series_terminees, CAT_DEFAULTS.series_terminees);
+ingest("series_ajour", RAW_DATA.series_ajour, CAT_DEFAULTS.series_ajour);
+ingest("series_encours", RAW_DATA.series_encours, CAT_DEFAULTS.series_encours);
+ingest("series_avoir", RAW_DATA.series_avoir, CAT_DEFAULTS.series_avoir);
+
+// re-hydrate user-added items (persisted separately so we can offer delete + track custom:true)
+CUSTOM_ITEMS.forEach(raw => {
+  const defaults = CAT_DEFAULTS[raw.cat] || CAT_DEFAULTS.films_avoir;
+  ingest(raw.cat, [raw], defaults, true);
+});
+
+// hydrate overrides from STATE, and initialize STATE entries that don't exist yet
+ALL_ITEMS.forEach((item, i) => {
+  if(!STATE[item.uid]){
+    STATE[item.uid] = {
+      rating: 0, liked: null, review: "", funFact: "",
+      saisons: item.saisons ? JSON.parse(JSON.stringify(item.saisons)) : null,
+      order: i
+    };
+  } else if(STATE[item.uid].saisons == null && item.saisons){
+    STATE[item.uid].saisons = JSON.parse(JSON.stringify(item.saisons));
+  }
+  if(STATE[item.uid].order == null) STATE[item.uid].order = i;
+});
+saveState();
+
+// ---------- TMDb integration (real posters, cast photos, exact IMDb link) ----------
+const TMDB_KEY_STORAGE = "tmdb_api_key_v1";
+const TMDB_CACHE_STORAGE = "tmdb_cache_v1";
+
+let TMDB_API_KEY = localStorage.getItem(TMDB_KEY_STORAGE) || "";
+let TMDB_CACHE = {};
+try{ TMDB_CACHE = JSON.parse(localStorage.getItem(TMDB_CACHE_STORAGE) || "{}"); }catch(e){ TMDB_CACHE = {}; }
+
+function saveTmdbCache(){
+  try{ localStorage.setItem(TMDB_CACHE_STORAGE, JSON.stringify(TMDB_CACHE)); }catch(e){}
+}
+
+function isSeriesCat(cat){
+  return cat.startsWith("series_");
+}
+
+// Cache schema version: bump this whenever we add new fields to TMDB_CACHE entries
+// (e.g. realSeasons/numberOfEpisodes). Old entries missing the current version get refetched once.
+const TMDB_CACHE_VERSION = 3;
+
+function needsRefetch(item, cached){
+  if(!cached) return true;
+  if(cached.notFound) return false; // don't hammer titles that genuinely don't exist on TMDb
+  if(cached.cacheVersion !== TMDB_CACHE_VERSION) return true;
+  if(isSeriesCat(item.cat) && (cached.realSeasons === undefined || cached.numberOfEpisodes == null)) return true;
+  return false;
+}
+
+// small concurrency-limited queue so we don't blast TMDb with 300 requests at once
+let tmdbQueue = [];
+let tmdbActive = 0;
+const TMDB_MAX_CONCURRENT = 4;
+
+function queueTmdbFetch(item){
+  if(!TMDB_API_KEY) return;
+  if(!needsRefetch(item, TMDB_CACHE[item.uid])) return;
+  if(tmdbQueue.some(q => q.uid === item.uid)) return;
+  tmdbQueue.push(item);
+  pumpTmdbQueue();
+}
+
+function pumpTmdbQueue(){
+  while(tmdbActive < TMDB_MAX_CONCURRENT && tmdbQueue.length > 0){
+    const item = tmdbQueue.shift();
+    tmdbActive++;
+    fetchTmdbFor(item).finally(() => {
+      tmdbActive--;
+      pumpTmdbQueue();
+    });
+  }
+}
+
+async function fetchTmdbFor(item){
+  const type = isSeriesCat(item.cat) ? "tv" : "movie";
+  try{
+    const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(item.title)}&language=fr-FR`);
+    const searchData = await searchRes.json();
+    const first = (searchData.results || [])[0];
+    if(!first){
+      TMDB_CACHE[item.uid] = { notFound: true };
+      saveTmdbCache();
+      if(currentTab === item.cat) render();
+      if(currentModalUid === item.uid) openModal(item.uid);
+      return;
+    }
+    const detailRes = await fetch(`https://api.themoviedb.org/3/${type}/${first.id}?api_key=${TMDB_API_KEY}&language=fr-FR&append_to_response=credits,external_ids`);
+    const detail = await detailRes.json();
+    const dateStr = type === "movie" ? detail.release_date : detail.first_air_date;
+    const year = dateStr ? dateStr.slice(0,4) : "";
+    const imdbId = detail.external_ids && detail.external_ids.imdb_id ? detail.external_ids.imdb_id : null;
+    const cast = ((detail.credits && detail.credits.cast) || []).slice(0, 8).map(c => ({
+      name: c.name,
+      photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null
+    }));
+    let director = "";
+    if(type === "movie"){
+      const dirEntry = ((detail.credits && detail.credits.crew) || []).find(c => c.job === "Director");
+      director = dirEntry ? dirEntry.name : "";
+    } else {
+      director = (detail.created_by || []).map(c => c.name).join(", ");
+    }
+    let realSeasons = null, numberOfSeasons = null, numberOfEpisodes = null;
+    if(type === "tv"){
+      const seasonsArr = (detail.seasons || []).filter(s => s.season_number > 0 && s.episode_count > 0);
+      realSeasons = seasonsArr.map(s => ({ number: s.season_number, episodeCount: s.episode_count, name: s.name }));
+      numberOfSeasons = detail.number_of_seasons || realSeasons.length;
+      numberOfEpisodes = detail.number_of_episodes || realSeasons.reduce((a,s) => a + s.episodeCount, 0);
+    }
+    TMDB_CACHE[item.uid] = {
+      id: first.id, type, cacheVersion: TMDB_CACHE_VERSION,
+      poster: detail.poster_path ? `https://image.tmdb.org/t/p/w342${detail.poster_path}` : null,
+      year, releaseDate: dateStr || "", imdbId, cast, director,
+      voteAverage: typeof detail.vote_average === "number" ? Math.round(detail.vote_average * 10) / 10 : null,
+      realSeasons, numberOfSeasons, numberOfEpisodes,
+      link: imdbId ? `https://www.imdb.com/title/${imdbId}/` : item.link
+    };
+    saveTmdbCache();
+
+    // auto-sync real season/episode counts the first time we get TMDb data for this title
+    // (keeps whatever episodes were already checked, only fixes the total counts)
+    const st = STATE[item.uid];
+    if(st && !st.tmdbAutoSynced && realSeasons && realSeasons.length){
+      const oldSeasons = st.saisons || [];
+      st.saisons = realSeasons.map(rs => {
+        const old = oldSeasons.find(s => s.numero === rs.number);
+        const episodes = Array(rs.episodeCount).fill(false);
+        if(old){
+          for(let i = 0; i < Math.min(old.episodes.length, episodes.length); i++){
+            episodes[i] = old.episodes[i];
+          }
+        }
+        return { numero: rs.number, episodes };
+      });
+      st.tmdbAutoSynced = true;
+      saveState();
+    }
+
+    if(currentTab === item.cat) render();
+    if(currentModalUid === item.uid) openModal(item.uid);
+    if(imdbId && OMDB_API_KEY) queueOmdbFetch(imdbId);
+  }catch(err){
+    // network / CORS issue — fail silently, keep default gradient poster
+  }
+}
+
+function tmdbInfoFor(uid){ return TMDB_CACHE[uid] || null; }
+
+// ---------- similar titles (on-demand, cached) ----------
+const SIMILAR_CACHE_STORAGE = "tmdb_similar_cache_v1";
+let SIMILAR_CACHE = {};
+try{ SIMILAR_CACHE = JSON.parse(localStorage.getItem(SIMILAR_CACHE_STORAGE) || "{}"); }catch(e){ SIMILAR_CACHE = {}; }
+function saveSimilarCache(){ try{ localStorage.setItem(SIMILAR_CACHE_STORAGE, JSON.stringify(SIMILAR_CACHE)); }catch(e){} }
+
+async function fetchSimilarFor(uid, tmdbId, type){
+  const key = type + ":" + tmdbId;
+  if(SIMILAR_CACHE[key]) { if(currentModalUid === uid) openModal(uid); return; }
+  try{
+    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/similar?api_key=${TMDB_API_KEY}&language=fr-FR`);
+    const data = await res.json();
+    SIMILAR_CACHE[key] = (data.results || []).slice(0, 8).map(r => ({
+      title: r.title || r.name,
+      poster: r.poster_path ? `https://image.tmdb.org/t/p/w185${r.poster_path}` : null,
+      tmdbUrl: `https://www.themoviedb.org/${type}/${r.id}`
+    }));
+    saveSimilarCache();
+    if(currentModalUid === uid) openModal(uid);
+  }catch(err){ /* fail silently */ }
+}
+function similarFor(tmdbId, type){ return SIMILAR_CACHE[type + ":" + tmdbId] || null; }
+
+// ---------- OMDb integration (real IMDb rating, on-demand to save the free daily quota) ----------
+const OMDB_KEY_STORAGE = "omdb_api_key_v1";
+const OMDB_CACHE_STORAGE = "omdb_cache_v1";
+let OMDB_API_KEY = localStorage.getItem(OMDB_KEY_STORAGE) || "";
+let OMDB_CACHE = {};
+try{ OMDB_CACHE = JSON.parse(localStorage.getItem(OMDB_CACHE_STORAGE) || "{}"); }catch(e){ OMDB_CACHE = {}; }
+function saveOmdbCache(){ try{ localStorage.setItem(OMDB_CACHE_STORAGE, JSON.stringify(OMDB_CACHE)); }catch(e){} }
+
+let omdbQueue = [];
+let omdbActive = 0;
+function queueOmdbFetch(imdbId){
+  if(!OMDB_API_KEY || !imdbId) return;
+  if(OMDB_CACHE[imdbId] !== undefined) return;
+  if(omdbQueue.includes(imdbId)) return;
+  omdbQueue.push(imdbId);
+  pumpOmdbQueue();
+}
+function pumpOmdbQueue(){
+  while(omdbActive < 2 && omdbQueue.length > 0){
+    const imdbId = omdbQueue.shift();
+    omdbActive++;
+    fetchOmdbFor(imdbId).finally(() => { omdbActive--; pumpOmdbQueue(); });
+  }
+}
+async function fetchOmdbFor(imdbId){
+  try{
+    const res = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${OMDB_API_KEY}`);
+    const data = await res.json();
+    OMDB_CACHE[imdbId] = (data && data.imdbRating && data.imdbRating !== "N/A") ? data.imdbRating : null;
+    saveOmdbCache();
+    if(currentModalUid){
+      const cur = ALL_ITEMS.find(it => it.uid === currentModalUid);
+      const tmdb = cur ? tmdbInfoFor(cur.uid) : null;
+      if(tmdb && tmdb.imdbId === imdbId) openModal(currentModalUid);
+    }
+  }catch(err){ /* fail silently */ }
+}
+function omdbRatingFor(imdbId){ return imdbId ? OMDB_CACHE[imdbId] : undefined; }
+
+function openTmdbSettings(){
+  modalEl.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-title">Affiches, casting &amp; notes</div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-section">
+      <p style="font-size:13px; color:var(--muted); line-height:1.5;">
+        Pour afficher les vraies affiches, le casting avec photo, le réalisateur, la date de sortie et la note TMDb :
+      </p>
+      <ol style="font-size:13px; color:var(--muted); line-height:1.7; padding-left:18px;">
+        <li>Créez un compte gratuit sur <a class="modal-link" href="https://www.themoviedb.org/signup" target="_blank" rel="noopener" style="display:inline;">themoviedb.org</a></li>
+        <li>Allez dans Paramètres → API, demandez une clé "Developer" (gratuit, immédiat)</li>
+        <li>Collez ci-dessous la "Clé API (v3 auth)"</li>
+      </ol>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Clé API TMDb</div>
+      <input type="text" id="tmdbKeyInput" value="${TMDB_API_KEY}" placeholder="Collez votre clé ici" style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:8px; font-size:13px;">
+    </div>
+    <div class="modal-section">
+      <p style="font-size:13px; color:var(--muted); line-height:1.5;">
+        Pour ajouter en plus la <b>vraie note IMDb</b> (optionnel, 1000 requêtes/jour gratuites) :
+        <a class="modal-link" href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noopener" style="display:inline;">omdbapi.com/apikey.aspx</a> → FREE → collez la clé reçue par email.
+      </p>
+      <div class="modal-label">Clé API OMDb (optionnelle)</div>
+      <input type="text" id="omdbKeyInput" value="${OMDB_API_KEY}" placeholder="Collez votre clé OMDb ici" style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:8px; font-size:13px;">
+    </div>
+    <div class="modal-section" style="display:flex; gap:10px;">
+      <button class="heart-btn active-like" id="saveTmdbKey" style="flex:1;">Enregistrer</button>
+      <button class="heart-btn" id="clearTmdbCacheBtn" style="flex:1;">Vider le cache</button>
+    </div>
+    <p class="save-note">Les clés restent uniquement dans ce fichier (stockage local), jamais envoyées ailleurs qu'à TMDb / OMDb.</p>
+  `;
+  overlayEl.classList.add("open");
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("saveTmdbKey").addEventListener("click", () => {
+    TMDB_API_KEY = document.getElementById("tmdbKeyInput").value.trim();
+    OMDB_API_KEY = document.getElementById("omdbKeyInput").value.trim();
+    localStorage.setItem(TMDB_KEY_STORAGE, TMDB_API_KEY);
+    localStorage.setItem(OMDB_KEY_STORAGE, OMDB_API_KEY);
+    schedulePush();
+    closeModal();
+    toast(TMDB_API_KEY ? "Clés enregistrées — chargement en cours ✓" : "Clés supprimées.", "success");
+    renderApiStatus();
+    render();
+  });
+  document.getElementById("clearTmdbCacheBtn").addEventListener("click", () => {
+    TMDB_CACHE = {};
+    OMDB_CACHE = {};
+    saveTmdbCache();
+    saveOmdbCache();
+    toast("Cache vidé — tout va se recharger.", "success");
+    render();
+  });
+}
+document.getElementById("tmdbSettingsBtn").addEventListener("click", openTmdbSettings);
+
+function openSyncSettings(){
+  modalEl.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-title">Synchronisation multi-appareils</div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-section">
+      <p style="font-size:13px; color:var(--muted); line-height:1.6;">
+        Choisissez un <b>code personnel</b> (comme un mot de passe) : entrez-le sur chaque appareil
+        (PC, téléphone...) pour retrouver automatiquement vos notes, épisodes cochés, titres ajoutés et vos clés API.
+        Gardez-le pour vous — n'importe qui avec ce code peut voir/modifier vos données.
+      </p>
+    </div>
+    ${SYNC_CODE ? `
+    <div class="modal-section">
+      <div class="modal-label">Votre code actuel (entrez-le sur vos autres appareils)</div>
+      <input type="text" id="syncCodeDisplay" value="${SYNC_CODE}" readonly style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--gold); font-weight:700; font-size:18px; letter-spacing:3px; text-align:center; padding:12px; border-radius:8px;">
+    </div>
+    <div class="modal-section" style="display:flex; gap:10px;">
+      <button class="mini-btn" id="syncNowBtn" style="flex:1;">🔄 Forcer une synchro maintenant</button>
+      <button class="heart-btn" id="disconnectSyncBtn" style="flex:1; border-color:var(--red); color:var(--red);">Se déconnecter de ce code</button>
+    </div>
+    ` : `
+    <div class="modal-section">
+      <button class="heart-btn active-like" id="createCodeBtn" style="width:100%;">✨ Créer un nouveau code de synchronisation</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Ou entrez un code existant (créé sur un autre appareil)</div>
+      <input type="text" id="existingCodeInput" placeholder="Ex : K3F9A2XZ" style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:8px; font-size:14px; text-transform:uppercase;">
+      <button class="mini-btn" id="useExistingCodeBtn" style="margin-top:8px; width:100%;">Utiliser ce code</button>
+    </div>
+    `}
+    <p class="save-note">Fonctionne via Firebase (gratuit). Sans code, tout reste uniquement stocké sur cet appareil.</p>
+  `;
+  overlayEl.classList.add("open");
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+
+  const createBtn = document.getElementById("createCodeBtn");
+  if(createBtn){
+    createBtn.addEventListener("click", async () => {
+      SYNC_CODE = generateSyncCode();
+      localStorage.setItem(SYNC_CODE_KEY, SYNC_CODE);
+      await pushToCloud();
+      toast("Code créé : " + SYNC_CODE + " — notez-le pour vos autres appareils.", "success");
+      openSyncSettings();
+    });
+  }
+  const useBtn = document.getElementById("useExistingCodeBtn");
+  if(useBtn){
+    useBtn.addEventListener("click", async () => {
+      const code = document.getElementById("existingCodeInput").value.trim().toUpperCase();
+      if(!code){ toast("Merci d'entrer un code.", "error"); return; }
+      SYNC_CODE = code;
+      localStorage.setItem(SYNC_CODE_KEY, SYNC_CODE);
+      toast("Connexion en cours…", "success");
+      await syncPullAndRefresh(code, { notify: true });
+      openSyncSettings();
+    });
+  }
+  const syncNowBtn = document.getElementById("syncNowBtn");
+  if(syncNowBtn){
+    syncNowBtn.addEventListener("click", async () => {
+      toast("Synchronisation en cours…", "success");
+      await pushToCloud();
+      await syncPullAndRefresh(SYNC_CODE, { notify: true });
+    });
+  }
+  const disconnectBtn = document.getElementById("disconnectSyncBtn");
+  if(disconnectBtn){
+    disconnectBtn.addEventListener("click", () => {
+      if(!confirm("Se déconnecter ? Vos données resteront sur cet appareil mais ne se synchroniseront plus.")) return;
+      SYNC_CODE = "";
+      localStorage.removeItem(SYNC_CODE_KEY);
+      closeModal();
+      toast("Déconnecté de la synchronisation.", "success");
+    });
+  }
+}
+document.getElementById("syncSettingsBtn").addEventListener("click", openSyncSettings);
+
+function renderApiStatus(){
+  const banner = document.getElementById("apiStatusBanner");
+  if(!banner) return;
+  const tmdbOn = !!TMDB_API_KEY;
+  const omdbOn = !!OMDB_API_KEY;
+  const cachedCount = Object.keys(TMDB_CACHE).filter(k => TMDB_CACHE[k] && !TMDB_CACHE[k].notFound).length;
+  banner.innerHTML = `
+    <span>
+      TMDb (affiches, casting, réalisateur, note) : <b style="color:${tmdbOn ? 'var(--green)' : 'var(--red)'}">${tmdbOn ? 'activé ✓' : 'non configuré'}</b>
+      &nbsp;·&nbsp; OMDb (note IMDb) : <b style="color:${omdbOn ? 'var(--green)' : 'var(--muted2)'}">${omdbOn ? 'activé ✓' : 'non configuré (optionnel)'}</b>
+      ${tmdbOn ? `&nbsp;·&nbsp; ${cachedCount} fiche(s) déjà en cache` : ""}
+    </span>
+    <button class="mini-btn" id="apiStatusBtn">${tmdbOn ? 'Modifier' : 'Configurer maintenant'}</button>
+  `;
+  const btn = document.getElementById("apiStatusBtn");
+  if(btn) btn.addEventListener("click", openTmdbSettings);
+}
+let currentTab = "films_vu";
+let searchTerm = "";
+
+const tabsEl = document.getElementById("tabs");
+const searchEl = document.getElementById("search");
+const gridEl = document.getElementById("grid");
+const rankListEl = document.getElementById("rankList");
+const countEl = document.getElementById("count");
+const emptyEl = document.getElementById("empty");
+const statsEl = document.getElementById("stats");
+const overlayEl = document.getElementById("overlay");
+const modalEl = document.getElementById("modal");
+
+// ---------- theme icons (original, generic SVGs — no characters/logos) ----------
+const ICONS = {
+  sword: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2.5 21 9l-1.5 1.5L13 4V2.5h1.5Z"/><path d="M13 4 4 13l-1.5 4.5L2 20l2.5-.5L8 18l9-9"/><path d="m6.5 15.5 2 2"/><path d="m4.5 17.5 2 2"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 7.8 8 9 4.5-1.2 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>`,
+  ghost: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11a7 7 0 0 1 14 0v9l-2.5-2-2 2-2-2-2 2-2-2L5 20Z"/><circle cx="9.5" cy="11" r="0.8" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11" r="0.8" fill="currentColor" stroke="none"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S3.5 15.2 3.5 9.2A4.7 4.7 0 0 1 12 6.5a4.7 4.7 0 0 1 8.5 2.7c0 6-8.5 11.3-8.5 11.3Z"/></svg>`,
+  rocket: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5c3 1 5 3 6 6-3 1-5.5.5-7.5-1.5s-2.5-4.5-1.5-7.5c1 0 2 .5 3 3Z"/><path d="M14.5 3.5c-4 1-8 5-9 9.5L9 17l4-3.5c4.5-1 8.5-5 9.5-9-1.5-.5-3-1-4-1Z"/><path d="M9 17c-1.5 0-4 .5-5 3 2.5-1 3-2.5 3-4"/><circle cx="15" cy="9" r="1.4"/></svg>`,
+  target: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/><path stroke-linecap="round" d="M12 2.2v3M12 18.8v3M2.2 12h3M18.8 12h3"/></svg>`,
+  basketball: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="8.5"/><path stroke-linecap="round" d="M3.6 12h16.8M12 3.6v16.8M6 5.3c2.5 2.6 2.5 11 0 13.4M18 5.3c-2.5 2.6-2.5 11 0 13.4"/></svg>`,
+  graduation: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5 12 4l10 4.5-10 4.5-10-4.5Z"/><path d="M6.5 10.7v4.3c0 1.7 2.5 3 5.5 3s5.5-1.3 5.5-3v-4.3"/><path d="M20.5 8.5v6"/></svg>`,
+  paw: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><ellipse cx="12" cy="16.2" rx="5.2" ry="4.2"/><ellipse cx="5.6" cy="10.4" rx="1.9" ry="2.4"/><ellipse cx="18.4" cy="10.4" rx="1.9" ry="2.4"/><ellipse cx="9" cy="6.6" rx="1.7" ry="2.2"/><ellipse cx="15" cy="6.6" rx="1.7" ry="2.2"/></svg>`,
+  diamond: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 9h16l-8 12L4 9Z"/><path d="m8 4-2 5h12l-2-5H8Z"/><path d="M2 9h20"/></svg>`,
+  explosion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="m12 2 1.5 4.5L18 5l-1 4.5L21 11l-4.2 2 2.2 4-4.5-1L13 20l-2.5-3.5L6 18l1.5-4L3 12l4.5-2L6 6l4.5 1L12 2Z"/></svg>`,
+  comedy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9c0-3 3.5-5 8-5s8 2 8 5-3.5 9-8 9-8-6-8-9Z"/><path d="M8.5 9.5c.3.6.9 1 1.5 1s1.2-.4 1.5-1M13 9.5c.3.6.9 1 1.5 1s1.2-.4 1.5-1"/><path d="M8.5 14c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8"/></svg>`,
+  briefcase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7.5" width="18" height="12" rx="1.5"/><path d="M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2"/><path d="M3 13h18"/></svg>`,
+  wand: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 12-12"/><path d="M16 8 20 4"/><path d="M17 3v2M20 6h2M13.5 3.5l.7.7M22 9.5l-.7.7"/></svg>`,
+  clapper: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 20 7l1 5-17 3.5-1-5Z"/><path d="m5 8.5 2.5 3M9.5 7.5 12 10.5M14 6.5l2.5 3"/><rect x="3" y="12.5" width="18" height="7" rx="1"/></svg>`,
+};
+
+function iconFor(key){ return ICONS[key] || ICONS.clapper; }
+
+function hashTitle(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++){ h = (h*31 + str.charCodeAt(i)) | 0; }
+  return Math.abs(h);
+}
+
+// ---------- toast notifications ----------
+const toastWrapEl = document.getElementById("toastWrap");
+function toast(message, type){
+  const el = document.createElement("div");
+  el.className = "toast " + (type || "");
+  el.textContent = message;
+  toastWrapEl.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = "toastOut .2s ease forwards";
+    setTimeout(() => el.remove(), 200);
+  }, 2600);
+}
+function posterGradient(title, hueBase){
+  const h = hashTitle(title);
+  const hue1 = (hueBase + (h % 40) - 20 + 360) % 360;
+  const hue2 = (hue1 + 35 + (h % 25)) % 360;
+  const angle = 120 + (h % 80);
+  return `linear-gradient(${angle}deg, hsl(${hue1} 48% 17%) 0%, hsl(${hue2} 58% 11%) 100%)`;
+}
+function starString(rating){
+  rating = rating || 0;
+  let s = "";
+  for(let i=1;i<=5;i++){ s += i <= rating ? "★" : "☆"; }
+  return s;
+}
+function heartMark(liked){
+  if(liked === true) return "❤️";
+  if(liked === false) return "💔";
+  return "";
+}
+function seasonsCounts(saisons){
+  let watched = 0, total = 0;
+  if(saisons){ saisons.forEach(s => { total += s.episodes.length; watched += s.episodes.filter(Boolean).length; }); }
+  return { watched, total };
+}
+function seasonsProgressLabel(saisons){
+  if(!saisons) return "";
+  const { watched, total } = seasonsCounts(saisons);
+  return `${watched}/${total} épisodes vus`;
+}
+function seasonsProgressPercent(saisons){
+  if(!saisons) return null;
+  const { watched, total } = seasonsCounts(saisons);
+  if(total === 0) return 0;
+  return Math.round((watched/total)*100);
+}
+function currentPositionLabel(saisons){
+  if(!saisons || saisons.length === 0) return null;
+  // find first season that isn't 100% watched; if all complete, use the last one
+  let idx = saisons.findIndex(s => s.episodes.some(e => !e));
+  if(idx === -1) idx = saisons.length - 1;
+  const season = saisons[idx];
+  const total = season.episodes.length;
+  const watchedCount = season.episodes.filter(Boolean).length;
+  // "current" episode = highest watched index + 1 (last one actually watched), best-effort if non-contiguous
+  let lastWatchedIdx = -1;
+  for(let i = total - 1; i >= 0; i--){ if(season.episodes[i]){ lastWatchedIdx = i; break; } }
+  const pctSeason = total > 0 ? Math.round((watchedCount/total)*100) : 0;
+  return {
+    seasonNumber: season.numero,
+    episodeLabel: lastWatchedIdx >= 0 ? (lastWatchedIdx + 1) : 0,
+    total, pctSeason, watchedCount,
+    complete: watchedCount === total
+  };
+}
+
+function syncSeasonsWithTmdb(uid){
+  const st = STATE[uid];
+  const tmdb = tmdbInfoFor(uid);
+  if(!tmdb || !tmdb.realSeasons || !tmdb.realSeasons.length) return;
+
+  const oldSeasons = st.saisons || [];
+  const newSeasons = tmdb.realSeasons.map(rs => {
+    const old = oldSeasons.find(s => s.numero === rs.number);
+    const episodes = Array(rs.episodeCount).fill(false);
+    if(old){
+      for(let i = 0; i < Math.min(old.episodes.length, episodes.length); i++){
+        episodes[i] = old.episodes[i];
+      }
+    }
+    return { numero: rs.number, episodes };
+  });
+  st.saisons = newSeasons;
+  saveState();
+  toast(`Saisons synchronisées : ${tmdb.numberOfSeasons} saison(s), ${tmdb.numberOfEpisodes} épisode(s) au total.`, "success");
+  openModal(uid);
+  render();
+}
+
+function forceTmdbRefresh(uid){
+  if(!TMDB_API_KEY){
+    toast("Configurez d'abord votre clé TMDb (bouton 🎞️ en haut de page).", "error");
+    return;
+  }
+  const item = ALL_ITEMS.find(it => it.uid === uid);
+  if(!item) return;
+  delete TMDB_CACHE[uid];
+  saveTmdbCache();
+  if(STATE[uid]) STATE[uid].tmdbAutoSynced = false;
+  saveState();
+  toast("Nouvelle recherche TMDb en cours…", "success");
+  fetchTmdbFor(item);
+}
+
+function itemsForTab(tab){
+  return ALL_ITEMS.filter(it => it.cat === tab);
+}
+
+function renderStats(){
+  const count = c => itemsForTab(c).length;
+  statsEl.innerHTML = `
+    <div class="stat vu"><b>${count("films_vu")}</b><span>Films vus</span></div>
+    <div class="stat avoir"><b>${count("films_avoir")}</b><span>Films à voir</span></div>
+    <div class="stat terminee"><b>${count("series_terminees")}</b><span>Séries finies</span></div>
+    <div class="stat encours"><b>${count("series_ajour")}</b><span>Séries à jour</span></div>
+    <div class="stat encours"><b>${count("series_encours")}</b><span>Séries en cours</span></div>
+    <div class="stat avoir"><b>${count("series_avoir")}</b><span>Séries à voir</span></div>
+  `;
+}
+
+function renderGridTab(){
+  gridEl.style.display = "grid";
+  rankListEl.style.display = "none";
+
+  const items = itemsForTab(currentTab).filter(it => it.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  countEl.textContent = `${items.length} titre${items.length !== 1 ? "s" : ""}`;
+
+  if(items.length === 0){
+    gridEl.innerHTML = "";
+    emptyEl.style.display = "block";
+    return;
+  }
+  emptyEl.style.display = "none";
+
+  gridEl.innerHTML = items.map((it, i) => {
+    const st = STATE[it.uid];
+    const bg = posterGradient(it.title, it.hueBase);
+    const tmdb = tmdbInfoFor(it.uid);
+    const badgeLabel = it.cat === "series_encours"
+      ? (it.categorie ? it.categorie.split(" - ")[0] : "En cours")
+      : it.badgeDefault;
+    const badgeHtml = badgeLabel ? `<span class="poster-badge ${it.cls}">${badgeLabel}</span>` : "";
+    const heart = heartMark(st.liked);
+    const heartHtml = heart ? `<span class="poster-heart">${heart}</span>` : "";
+    const starsHtml = st.rating > 0 ? `<div class="poster-stars">${starString(st.rating)}</div>` : "";
+    let progLine = "";
+    let progLine2 = "";
+    let gaugeHtml = "";
+    if(it.cat === "series_ajour" && !st.saisons){
+      progLine = it.progression || "";
+    }
+    if(st.saisons){
+      const counts = seasonsCounts(st.saisons);
+      const pct = seasonsProgressPercent(st.saisons);
+      const pos = currentPositionLabel(st.saisons);
+      const totalSeasonsKnown = tmdb && tmdb.numberOfSeasons ? tmdb.numberOfSeasons : st.saisons.length;
+      const totalEpKnown = tmdb && tmdb.numberOfEpisodes ? tmdb.numberOfEpisodes : counts.total;
+      if(pos){
+        progLine = pos.complete
+          ? `Saison ${pos.seasonNumber}/${totalSeasonsKnown} terminée (${pos.total} ép.)`
+          : `Saison ${pos.seasonNumber}/${totalSeasonsKnown} · Ép. ${pos.episodeLabel}/${pos.total}`;
+        progLine2 = `${pct}% de la série &middot; ${counts.watched}/${totalEpKnown} épisodes`;
+      }
+      gaugeHtml = `<div class="poster-gauge"><div class="poster-gauge-fill" style="width:${pct}%"></div></div>`;
+    }
+    const progHtml = progLine ? `<div class="poster-progress">${progLine}${progLine2 ? `<br>${progLine2}` : ""}</div>` : "";
+    const realPosterHtml = (tmdb && tmdb.poster) ? `<img class="poster-real-img" src="${tmdb.poster}" alt="" loading="lazy">` : "";
+    const loadingHtml = (TMDB_API_KEY && !tmdb) ? `<span class="poster-loading">chargement…</span>` : "";
+    const iconHtml = realPosterHtml ? "" : `<div class="poster-icon">${iconFor(it.icon)}</div>`;
+    const hasImgClass = realPosterHtml ? " has-img" : "";
+    return `
+      <div class="poster${hasImgClass}" style="--i:${Math.min(i,30)};" data-uid="${it.uid}">
+        <div class="poster-image${hasImgClass ? ' has-img-inner' : ''}" style="background:${bg}">
+          ${realPosterHtml}
+          ${iconHtml}
+          ${loadingHtml}
+          ${badgeHtml}
+          ${heartHtml}
+        </div>
+        <div class="poster-bottombar">
+          <div class="poster-title">${it.title}</div>
+          ${starsHtml}
+          ${progHtml}
+        </div>
+        ${gaugeHtml}
+      </div>`;
+  }).join("");
+
+  gridEl.querySelectorAll(".poster").forEach(el => {
+    el.addEventListener("click", () => openModal(el.dataset.uid));
+  });
+
+  if(TMDB_API_KEY){
+    items.forEach(it => queueTmdbFetch(it));
+  }
+}
+
+function renderRankTab(){
+  gridEl.style.display = "none";
+  rankListEl.style.display = "block";
+  emptyEl.style.display = "none";
+
+  let items = ALL_ITEMS.slice().sort((a,b) => STATE[a.uid].order - STATE[b.uid].order);
+  const visible = items.filter(it => it.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  countEl.textContent = `${visible.length} titre${visible.length !== 1 ? "s" : ""} — glissez-déposez pour réordonner librement`;
+
+  rankListEl.innerHTML = visible.map((it, idx) => {
+    const st = STATE[it.uid];
+    const bg = posterGradient(it.title, it.hueBase);
+    const tmdb = tmdbInfoFor(it.uid);
+    const thumbInner = (tmdb && tmdb.poster)
+      ? `<img src="${tmdb.poster}" alt="" style="width:100%; height:100%; object-fit:cover; border-radius:5px;">`
+      : `<div style="width:60%; height:60%;">${iconFor(it.icon)}</div>`;
+    return `
+      <div class="rank-row" data-uid="${it.uid}" draggable="true">
+        <div class="rank-handle" title="Glisser pour déplacer">⠿</div>
+        <div class="rank-num">${idx+1}</div>
+        <div class="rank-thumb" style="background:${bg}; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.5); overflow:hidden;">
+          ${thumbInner}
+        </div>
+        <div class="rank-title">${it.title} <span style="color:var(--muted2); font-weight:400; font-size:11px;">(${it.badgeDefault || "en cours"})</span></div>
+        <div class="rank-heart">${heartMark(st.liked)}</div>
+        <div class="rank-stars">${starString(st.rating)}</div>
+      </div>`;
+  }).join("");
+
+  if(TMDB_API_KEY){
+    visible.forEach(it => queueTmdbFetch(it));
+  }
+
+  let dragUid = null;
+
+  rankListEl.querySelectorAll(".rank-row").forEach(row => {
+    const uid = row.dataset.uid;
+
+    row.addEventListener("click", (e) => {
+      if(e.target.closest(".rank-handle")) return;
+      openModal(uid);
+    });
+
+    row.addEventListener("dragstart", (e) => {
+      dragUid = uid;
+      row.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    row.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+      rankListEl.querySelectorAll(".rank-row").forEach(r => r.classList.remove("drag-over"));
+    });
+    row.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if(uid === dragUid) return;
+      row.classList.add("drag-over");
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("drag-over"));
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      row.classList.remove("drag-over");
+      if(!dragUid || dragUid === uid) return;
+      reorderByDrag(dragUid, uid);
+    });
+  });
+}
+
+function reorderByDrag(draggedUid, targetUid){
+  // full manual order across ALL items (search filter doesn't affect underlying order)
+  const full = ALL_ITEMS.slice().sort((a,b) => STATE[a.uid].order - STATE[b.uid].order);
+  const fromIdx = full.findIndex(it => it.uid === draggedUid);
+  const toIdx = full.findIndex(it => it.uid === targetUid);
+  if(fromIdx === -1 || toIdx === -1) return;
+  const [moved] = full.splice(fromIdx, 1);
+  full.splice(toIdx, 0, moved);
+  full.forEach((it, i) => { STATE[it.uid].order = i; });
+  saveState();
+  renderRankTab();
+}
+
+function render(){
+  if(currentTab === "classement"){
+    renderRankTab();
+  } else {
+    renderGridTab();
+  }
+}
+
+tabsEl.addEventListener("click", (e) => {
+  const btn = e.target.closest(".tab");
+  if(!btn) return;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  btn.classList.add("active");
+  currentTab = btn.dataset.tab;
+  searchEl.value = "";
+  searchTerm = "";
+  render();
+});
+searchEl.addEventListener("input", (e) => { searchTerm = e.target.value; render(); });
+
+// ---------- modal ----------
+let currentModalUid = null;
+function closeModal(){ overlayEl.classList.remove("open"); modalEl.innerHTML = ""; currentModalUid = null; }
+overlayEl.addEventListener("click", (e) => { if(e.target === overlayEl) closeModal(); });
+
+function openModal(uid){
+  const item = ALL_ITEMS.find(it => it.uid === uid);
+  const st = STATE[uid];
+  currentModalUid = uid;
+  if(TMDB_API_KEY) queueTmdbFetch(item);
+  const tmdb = tmdbInfoFor(uid);
+  const directLink = (tmdb && tmdb.link) ? tmdb.link : item.link;
+
+  const posterHtml = (tmdb && tmdb.poster) ? `<img class="modal-poster" src="${tmdb.poster}" alt="">` : "";
+  const yearHtml = (tmdb && tmdb.year) ? `<div class="modal-year">${tmdb.year}</div>` : "";
+
+  const imdbRating = tmdb && tmdb.imdbId ? omdbRatingFor(tmdb.imdbId) : undefined;
+  if(OMDB_API_KEY && tmdb && tmdb.imdbId && imdbRating === undefined) queueOmdbFetch(tmdb.imdbId);
+
+  const infoLines = [];
+  if(tmdb && tmdb.director) infoLines.push(`<div><b>Réalisateur${tmdb.director.includes(",") ? "s" : ""} :</b> ${tmdb.director}</div>`);
+  if(tmdb && tmdb.releaseDate) infoLines.push(`<div><b>Date de sortie :</b> ${tmdb.releaseDate}</div>`);
+  const infoHtml = infoLines.length ? `<div class="meta-row">${infoLines.join("")}</div>` : "";
+
+  const ratingPills = [];
+  if(tmdb && typeof tmdb.voteAverage === "number") ratingPills.push(`<span class="rating-pill tmdb">★ ${tmdb.voteAverage}/10 <span style="opacity:.6;">TMDb</span></span>`);
+  if(imdbRating) ratingPills.push(`<span class="rating-pill imdb">★ ${imdbRating}/10 <span style="opacity:.6;">IMDb</span></span>`);
+  else if(OMDB_API_KEY && tmdb && tmdb.imdbId && imdbRating === undefined) ratingPills.push(`<span class="rating-pill imdb loading-text">IMDb : chargement…</span>`);
+  const ratingsHtml = ratingPills.length ? `<div class="meta-row">${ratingPills.join("")}</div>` : "";
+
+  const letterboxdUrl = "https://letterboxd.com/search/" + encodeURIComponent(item.title) + "/";
+  const letterboxdHtml = `<a class="modal-link" href="${letterboxdUrl}" target="_blank" rel="noopener" style="margin-left:14px;">Chercher sur Letterboxd ↗</a>`;
+  const castHtml = (tmdb && tmdb.cast && tmdb.cast.length) ? `
+    <div class="modal-section">
+      <div class="modal-label">Casting</div>
+      <div class="cast-strip">
+        ${tmdb.cast.map(c => `
+          <div class="cast-card">
+            ${c.photo
+              ? `<img class="cast-photo" src="${c.photo}" alt="${c.name}">`
+              : `<div class="cast-photo-placeholder"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></div>`}
+            <div class="cast-name">${c.name}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>` : (TMDB_API_KEY ? "" : `<div class="modal-section"><p style="font-size:12px; color:var(--muted2);">Configurez une clé TMDb (bouton 🎞️ en haut) pour voir affiche, casting et lien IMDb exact ici.</p></div>`);
+
+  if(tmdb && tmdb.id && TMDB_API_KEY) fetchSimilarFor(uid, tmdb.id, tmdb.type);
+  const similarList = tmdb ? similarFor(tmdb.id, tmdb.type) : null;
+  const similarHtml = (similarList && similarList.length) ? `
+    <div class="modal-section">
+      <div class="modal-label">Films / séries similaires</div>
+      <div class="similar-strip">
+        ${similarList.map(s => `
+          <a class="similar-card" href="${s.tmdbUrl}" target="_blank" rel="noopener">
+            ${s.poster ? `<img class="similar-poster" src="${s.poster}" alt="${s.title}">` : `<div class="similar-poster"></div>`}
+            <div class="similar-title">${s.title}</div>
+          </a>
+        `).join("")}
+      </div>
+    </div>` : "";
+
+  const syncBtnHtml = (tmdb && tmdb.realSeasons && tmdb.realSeasons.length) ? `
+    <button class="mini-btn" id="syncSeasonsBtn" style="margin-bottom:10px;">🔄 Synchroniser avec TMDb (${tmdb.numberOfSeasons} saisons, ${tmdb.numberOfEpisodes} épisodes réels)</button>` : "";
+
+  const seasonsHtml = st.saisons ? st.saisons.map((season, sIdx) => {
+    const chips = season.episodes.map((watched, eIdx) => `
+      <div class="ep-chip ${watched ? 'watched' : ''}" data-season="${sIdx}" data-ep="${eIdx}">${eIdx+1}</div>
+    `).join("");
+    return `
+      <div class="season-block" data-season-block="${sIdx}">
+        <div class="season-head">
+          <b>Saison ${season.numero}</b>
+          <div class="season-actions">
+            <button class="mini-btn" data-add-ep="${sIdx}">+ épisode</button>
+            <button class="mini-btn" data-remove-ep="${sIdx}">- épisode</button>
+            <button class="mini-btn" data-remove-season="${sIdx}">supprimer saison</button>
+          </div>
+        </div>
+        <div class="ep-grid">${chips}</div>
+      </div>`;
+  }).join("") : "";
+
+  modalEl.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">${item.title}</div>
+        ${yearHtml}
+        <a class="modal-link" href="${directLink}" target="_blank" rel="noopener">Voir sur IMDb ↗</a>
+        ${letterboxdHtml}
+        <br><button class="mini-btn" id="forceRefreshBtn" style="margin-top:8px;">🔍 ${tmdb ? "Mettre à jour" : "Rechercher"} sur TMDb</button>
+      </div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    ${posterHtml}
+    ${infoHtml}
+    ${ratingsHtml}
+    ${castHtml}
+    ${similarHtml}
+
+    <div class="modal-section">
+      <div class="modal-label">Aimé / pas aimé</div>
+      <div class="heart-toggle">
+        <button class="heart-btn ${st.liked === true ? 'active-like' : ''}" data-like="true">❤️ Aimé</button>
+        <button class="heart-btn ${st.liked === false ? 'active-dislike' : ''}" data-like="false">💔 Pas aimé</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Ma note</div>
+      <div class="stars-input" id="starsInput">
+        ${[1,2,3,4,5].map(n => `<span data-star="${n}" class="${n <= st.rating ? 'filled' : ''}">★</span>`).join("")}
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Mon avis</div>
+      <textarea id="reviewInput" placeholder="Qu'avez-vous pensé de ce titre ?">${st.review || ""}</textarea>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Fun fact</div>
+      <textarea id="funfactInput" placeholder="Une anecdote à retenir...">${st.funFact || ""}</textarea>
+    </div>
+
+    ${st.saisons ? `
+    <div class="modal-section">
+      ${(() => {
+        const counts = seasonsCounts(st.saisons);
+        const totalSeasonsKnown = tmdb && tmdb.numberOfSeasons ? tmdb.numberOfSeasons : st.saisons.length;
+        const totalEpKnown = tmdb && tmdb.numberOfEpisodes ? tmdb.numberOfEpisodes : counts.total;
+        const sourceNote = (tmdb && tmdb.numberOfEpisodes) ? " (source : TMDb)" : " (estimation)";
+        return `<div class="modal-label">Progression globale${sourceNote} &mdash; ${counts.watched}/${totalEpKnown} épisodes &middot; ${totalSeasonsKnown} saison(s) au total (${seasonsProgressPercent(st.saisons)}%)</div>`;
+      })()}
+      <div class="poster-gauge" style="margin:0 0 8px;"><div class="poster-gauge-fill" style="width:${seasonsProgressPercent(st.saisons)}%"></div></div>
+      ${(() => {
+        const pos = currentPositionLabel(st.saisons);
+        if(!pos) return "";
+        const totalSeasonsKnown = tmdb && tmdb.numberOfSeasons ? tmdb.numberOfSeasons : st.saisons.length;
+        const label = pos.complete
+          ? `Saison ${pos.seasonNumber}/${totalSeasonsKnown} terminée (${pos.total} épisodes)`
+          : `Vous en êtes à la saison ${pos.seasonNumber}/${totalSeasonsKnown}, épisode ${pos.episodeLabel}/${pos.total} (${pos.pctSeason}% de cette saison)`;
+        return `<p style="font-size:12.5px; color:var(--muted); margin:0 0 12px;">📍 ${label}</p>`;
+      })()}
+      ${syncBtnHtml}
+      ${seasonsHtml}
+      <div class="season-add-row">
+        <button class="mini-btn" id="addSeasonBtn">+ ajouter une saison</button>
+      </div>
+    </div>` : ""}
+
+    <p class="save-note">Sauvegardé automatiquement dans ce fichier (navigateur)</p>
+    ${item.custom ? `<div class="modal-section"><button class="heart-btn" id="deleteItemBtn" style="width:100%; border-color:var(--red); color:var(--red);">🗑️ Supprimer ce titre (ajouté par moi)</button></div>` : ""}
+  `;
+
+  overlayEl.classList.add("open");
+
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  const forceBtn = document.getElementById("forceRefreshBtn");
+  if(forceBtn) forceBtn.addEventListener("click", () => forceTmdbRefresh(uid));
+
+  modalEl.querySelectorAll("[data-like]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const val = btn.dataset.like === "true";
+      st.liked = (st.liked === val) ? null : val;
+      saveState();
+      openModal(uid); // re-render modal to reflect state
+      render();
+    });
+  });
+
+  modalEl.querySelectorAll("#starsInput span").forEach(star => {
+    star.addEventListener("click", () => {
+      const n = parseInt(star.dataset.star, 10);
+      st.rating = (st.rating === n) ? 0 : n;
+      saveState();
+      openModal(uid);
+      render();
+    });
+  });
+
+  document.getElementById("reviewInput").addEventListener("input", (e) => { st.review = e.target.value; saveState(); });
+  document.getElementById("funfactInput").addEventListener("input", (e) => { st.funFact = e.target.value; saveState(); });
+
+  if(st.saisons){
+    modalEl.querySelectorAll(".ep-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const sIdx = parseInt(chip.dataset.season, 10);
+        const eIdx = parseInt(chip.dataset.ep, 10);
+        const wasWatched = st.saisons[sIdx].episodes[eIdx];
+
+        if(!wasWatched){
+          const markAllBefore = confirm(
+            `Marquer aussi comme vus tous les épisodes précédents jusqu'à Saison ${st.saisons[sIdx].numero}, Épisode ${eIdx+1} ?\n\n` +
+            `OK = cocher tout ce qui précède aussi\nAnnuler = cocher seulement cet épisode`
+          );
+          if(markAllBefore){
+            for(let s = 0; s < sIdx; s++){
+              st.saisons[s].episodes = st.saisons[s].episodes.map(() => true);
+            }
+            for(let e = 0; e <= eIdx; e++){
+              st.saisons[sIdx].episodes[e] = true;
+            }
+          } else {
+            st.saisons[sIdx].episodes[eIdx] = true;
+          }
+        } else {
+          st.saisons[sIdx].episodes[eIdx] = false;
+        }
+        saveState();
+        openModal(uid);
+        render();
+      });
+    });
+    modalEl.querySelectorAll("[data-add-ep]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sIdx = parseInt(btn.dataset.addEp, 10);
+        st.saisons[sIdx].episodes.push(false);
+        saveState(); openModal(uid); render();
+      });
+    });
+    modalEl.querySelectorAll("[data-remove-ep]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sIdx = parseInt(btn.dataset.removeEp, 10);
+        if(st.saisons[sIdx].episodes.length > 1) st.saisons[sIdx].episodes.pop();
+        saveState(); openModal(uid); render();
+      });
+    });
+    modalEl.querySelectorAll("[data-remove-season]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sIdx = parseInt(btn.dataset.removeSeason, 10);
+        if(st.saisons.length > 1){
+          st.saisons.splice(sIdx, 1);
+          st.saisons.forEach((s, i) => s.numero = i+1);
+          saveState(); openModal(uid); render();
+        }
+      });
+    });
+    const addSeasonBtn = document.getElementById("addSeasonBtn");
+    if(addSeasonBtn){
+      addSeasonBtn.addEventListener("click", () => {
+        st.saisons.push({ numero: st.saisons.length + 1, episodes: Array(10).fill(false) });
+        saveState(); openModal(uid); render();
+      });
+    }
+    const syncBtn = document.getElementById("syncSeasonsBtn");
+    if(syncBtn){
+      syncBtn.addEventListener("click", () => syncSeasonsWithTmdb(uid));
+    }
+  }
+
+  const deleteBtn = document.getElementById("deleteItemBtn");
+  if(deleteBtn){
+    deleteBtn.addEventListener("click", () => {
+      if(!confirm(`Supprimer définitivement "${item.title}" ?`)) return;
+      ALL_ITEMS = ALL_ITEMS.filter(it => it.uid !== uid);
+      CUSTOM_ITEMS = CUSTOM_ITEMS.filter(raw => (raw.uid || (raw.cat + ":" + slug(raw.Titre))) !== uid);
+      delete STATE[uid];
+      saveCustomItems();
+      saveState();
+      closeModal();
+      renderStats();
+      render();
+      toast("Titre supprimé.", "success");
+    });
+  }
+}
+
+document.getElementById("addItemBtn").addEventListener("click", openAddItemModal);
+
+function openAddItemModal(){
+  modalEl.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-title">Ajouter un titre</div>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Titre</div>
+      <input type="text" id="newTitle" placeholder="Nom du film ou de la série" style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:8px; font-size:14px;">
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Catégorie</div>
+      <select id="newCat" style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:8px; font-size:14px;">
+        <option value="films_vu">Film — Vu</option>
+        <option value="films_avoir">Film — À voir</option>
+        <option value="series_avoir">Série — À voir (pas commencé)</option>
+        <option value="series_encours">Série — En cours</option>
+        <option value="series_ajour">Série — À jour</option>
+        <option value="series_terminees">Série — Terminée</option>
+      </select>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Icône thématique</div>
+      <select id="newIcon" style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:8px; font-size:14px;">
+        <option value="clapper">🎬 Générique</option>
+        <option value="sword">⚔️ Fantasy / médiéval</option>
+        <option value="shield">🛡️ Super-héros</option>
+        <option value="ghost">👻 Horreur</option>
+        <option value="heart">❤️ Romance</option>
+        <option value="rocket">🚀 Science-fiction</option>
+        <option value="target">🎯 Action / thriller / crime</option>
+        <option value="basketball">🏀 Sport</option>
+        <option value="graduation">🎓 Ado / lycée</option>
+        <option value="paw">🐾 Animaux / famille</option>
+        <option value="diamond">💎 Braquage / luxe</option>
+        <option value="explosion">💥 Guerre</option>
+        <option value="comedy">🎭 Comédie</option>
+        <option value="briefcase">💼 Drame / politique</option>
+        <option value="wand">✨ Conte de fées</option>
+      </select>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Lien IMDb (optionnel — généré automatiquement sinon)</div>
+      <input type="text" id="newLink" placeholder="https://www.imdb.com/..." style="width:100%; background:var(--card); border:1px solid var(--line); color:var(--ink); padding:10px 12px; border-radius:8px; font-size:14px;">
+    </div>
+    <div class="modal-section" style="display:flex; gap:10px;">
+      <button class="heart-btn active-like" id="submitNewItem" style="flex:1;">Ajouter</button>
+      <button class="heart-btn" id="cancelNewItem" style="flex:1;">Annuler</button>
+    </div>
+  `;
+  overlayEl.classList.add("open");
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("cancelNewItem").addEventListener("click", closeModal);
+  document.getElementById("submitNewItem").addEventListener("click", submitNewItem);
+}
+
+function submitNewItem(){
+  const title = document.getElementById("newTitle").value.trim();
+  const cat = document.getElementById("newCat").value;
+  const icon = document.getElementById("newIcon").value;
+  let link = document.getElementById("newLink").value.trim();
+
+  if(!title){ toast("Merci de saisir un titre.", "error"); return; }
+
+  const uid = cat + ":" + slug(title);
+  if(ALL_ITEMS.some(it => it.uid === uid)){
+    toast("Ce titre existe déjà dans cette catégorie.", "error");
+    return;
+  }
+  if(!link){
+    link = "https://www.imdb.com/find/?q=" + encodeURIComponent(title) + "&s=tt";
+  }
+
+  const isSeries = cat.startsWith("series_");
+  let saisons = null;
+  if(isSeries){
+    const allWatched = (cat === "series_terminees");
+    saisons = [{ numero: 1, episodes: Array(10).fill(allWatched) }];
+  }
+
+  const raw = { uid, Titre: title, Lien: link, saisons, icon, cat };
+  CUSTOM_ITEMS.push(raw);
+  saveCustomItems();
+
+  const defaults = CAT_DEFAULTS[cat];
+  ingest(cat, [raw], defaults, true);
+
+  const newItem = ALL_ITEMS[ALL_ITEMS.length - 1];
+  STATE[newItem.uid] = {
+    rating: 0, liked: null, review: "", funFact: "",
+    saisons: newItem.saisons ? JSON.parse(JSON.stringify(newItem.saisons)) : null,
+    order: ALL_ITEMS.length - 1
+  };
+  saveState();
+
+  closeModal();
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(`.tab[data-tab="${cat}"]`).classList.add("active");
+  currentTab = cat;
+  searchEl.value = ""; searchTerm = "";
+  renderStats();
+  render();
+  toast(`"${title}" ajouté ✓`, "success");
+}
+
+// ---------- export / import backup ----------
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    source: "Ma Cinémathèque",
+    state: STATE,
+    customItems: CUSTOM_ITEMS
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `cinematheque_sauvegarde_${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("Sauvegarde téléchargée ✓", "success");
+});
+
+const importFileEl = document.getElementById("importFile");
+document.getElementById("importBtn").addEventListener("click", () => importFileEl.click());
+importFileEl.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      const incomingState = parsed.state || parsed; // tolerate raw state files too
+      const incomingCustom = parsed.customItems || [];
+      if(typeof incomingState !== "object") throw new Error("format invalide");
+
+      // 1) merge custom items (added films/series) that aren't already present
+      incomingCustom.forEach(raw => {
+        const uid = raw.uid || (raw.cat + ":" + slug(raw.Titre));
+        if(!ALL_ITEMS.some(it => it.uid === uid)){
+          CUSTOM_ITEMS.push(raw);
+          const defaults = CAT_DEFAULTS[raw.cat] || CAT_DEFAULTS.films_avoir;
+          ingest(raw.cat, [raw], defaults, true);
+        }
+      });
+      saveCustomItems();
+
+      // 2) merge state values (ratings, reviews, episodes, order) for matching uids
+      Object.keys(incomingState).forEach(uid => {
+        STATE[uid] = incomingState[uid];
+      });
+      // make sure any newly-ingested custom item without a state entry gets a default one
+      ALL_ITEMS.forEach((item, i) => {
+        if(!STATE[item.uid]){
+          STATE[item.uid] = {
+            rating: 0, liked: null, review: "", funFact: "",
+            saisons: item.saisons ? JSON.parse(JSON.stringify(item.saisons)) : null,
+            order: i
+          };
+        }
+      });
+      saveState();
+
+      renderStats();
+      render();
+      toast("Sauvegarde importée : notes, avis, épisodes et titres ajoutés ✓", "success");
+    }catch(err){
+      toast("Impossible de lire ce fichier de sauvegarde (format inattendu).", "error");
+    }
+    importFileEl.value = "";
+  };
+  reader.readAsText(file);
+});
+
+renderStats();
+renderApiStatus();
+render();
+
+if(SYNC_CODE){
+  syncPullAndRefresh(SYNC_CODE);
+}
+</script>
+</body>
+</html>
